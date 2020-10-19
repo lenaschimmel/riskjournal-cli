@@ -57,7 +57,7 @@ export abstract class Crud {
   abstract async performEdit(id: string): Promise<void>;
   abstract async performDelete(id: string): Promise<void>;
   abstract async performAdd(): Promise<string>;
-  abstract getIds(): Array<string>;
+  abstract getEntityChoices(): Array<{ name: string, message: string }>;
 
   createId(name: string, currentIds: Array<string>) {
     name = name.toLowerCase().replace(" ", "_");
@@ -68,7 +68,7 @@ export abstract class Crud {
   }
 
   async showEditMenu() {
-    let ids = this.getIds();
+    let ids = this.getEntityChoices();
     if (ids.length == 0) {
       console.log("Keine " + this.name + " vorhanden.");
       return;
@@ -87,7 +87,7 @@ export abstract class Crud {
   }
 
   async showDeleteMenu() {
-    let ids = this.getIds();
+    let ids = this.getEntityChoices();
     if (ids.length == 0) {
       console.log("Keine " + this.name + " vorhanden.");
       return;

@@ -243,7 +243,7 @@ export class ActivityCrud extends Crud {
     }
 
     let activity = {
-      id: this.createId(responseBeforeDate.title + "-" + beginDate, this.getIds()),
+      id: this.createId(responseBeforeDate.title + "-" + beginDate,  Array.from(this.profile.activities.keys())),
       title:                    responseBeforeDate.title,
       locationId:               responseAfterDate.locationId,
       begin:                    new Date(beginDate),
@@ -263,7 +263,7 @@ export class ActivityCrud extends Crud {
     return activity.id;
   }
 
-  getIds(): Array<string> {
-    return Array.from(this.profile.activities.keys());
+  getEntityChoices(): Array<{ name: string, message: string }> {
+    return this.profile.getActivityChoices();
   }
 }

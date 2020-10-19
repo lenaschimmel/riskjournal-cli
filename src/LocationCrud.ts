@@ -74,7 +74,7 @@ export class LocationCrud extends Crud {
     const response = await prompt(LocationCrud.questions);
 
     let location = {
-      id: this.createId(response.title, this.getIds()),
+      id: this.createId(response.title, Array.from(this.profile.activities.keys())),
       title: response.title,
       city: response.city,
       top: "Germany",
@@ -86,7 +86,7 @@ export class LocationCrud extends Crud {
     return location.id;
   }
 
-  getIds(): Array<string> {
-    return Array.from(this.profile.locations.keys());
+  getEntityChoices(): Array<{ name: string, message: string }> {
+    return this.profile.getLocationChoices();
   }
 }

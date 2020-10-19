@@ -89,7 +89,7 @@ export class PersonCrud extends Crud {
     }
 
     let person = {
-      id: this.createId(response.name, this.getIds()),
+      id: this.createId(response.name, Array.from(this.profile.persons.keys())),
       name: response.name,
       fullName: response.fullName,
       riskProfile: response.riskProfile,
@@ -102,7 +102,7 @@ export class PersonCrud extends Crud {
     return person.id;
   }
 
-  getIds(): Array<string> {
-    return Array.from(this.profile.persons.keys());
+  getEntityChoices(): Array<{ name: string, message: string }> {
+    return this.profile.getPersonChoices();
   }
 }
