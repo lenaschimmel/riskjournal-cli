@@ -1,14 +1,8 @@
 <!-- PROJECT LOGO -->
-<br />
-<p align="center">
-  <h3 align="center">microCOVID CLI</h3>
+# microCOVID CLI<
+A command line client to log activities and their risk of contracting COVID-19.<br/>
 
-  <p align="center">
-    A command line client to log activities and their risk of contracting COVID-19.<br/>
-    Heavily inspired and based on the the great [microCOVID](https://github.com/microcovid/microcovid).
-  </p>
-</p>
-
+Heavily inspired and based on the the great [microCOVID](https://github.com/microcovid/microcovid).
 
 
 <!-- TABLE OF CONTENTS -->
@@ -33,7 +27,7 @@
 
 This product is in very early development and **SHOULD NOT BE USED YET**. 
 
-If you are looking for a project that is reliable and ready to be used, head over to [https://www.microcovid.org](https://www.microcovid.org) ([source on GitHub](https://github.com/microcovid/microcovid)).
+If you are looking for a project that is reliable and ready to be used, head over to [microcovid.org](https://www.microcovid.org) ([source on GitHub](https://github.com/microcovid/microcovid)).
 
 In the near future, this app will let you keep a local journal of every activity that has some risk of contracting COVID-19 and compute your accumulated risk.
 
