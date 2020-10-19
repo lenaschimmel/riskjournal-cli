@@ -1,0 +1,31 @@
+{
+  "name": "microcovid-cli",
+  "version": "1.0.0",
+  "description": "CLI for the Microcovid project, will be a lib soon.",
+  "main": "build/index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "tsc": "tsc"
+  },
+  "author": "Lena Schimmel",
+  "license": "MIT",
+  "dependencies": {
+    "@types/date-and-time": "^0.13.0",
+    "@types/lodash": "^4.14.162",
+    "class-transformer": "^0.3.1",
+    "cli-table3": "^0.6.0",
+    "date-and-time": "^0.14.1",
+    "date-prompt": "^1.0.0",
+    "enquirer": "^2.3.6",
+    "lodash": "^4.17.20",
+    "reflect-metadata": "^0.1.13",
+    "sprintf-js": "^1.1.2",
+    "tslib": "2.0.3",
+    "typescript": "^4.0.3"
+  },
+  "devDependencies": {
+    "@testing-library/jest-dom": "^4.2.4",
+    "@types/jest": "^24.9.1",
+    "@types/node": "12.12.2"
+  }
+}
