@@ -220,6 +220,22 @@ export class ActivityCrud extends Crud {
     this.profile.activities.delete(id);
   }
 
+  async performDuplicate(id: string): Promise<void> {
+    let existingActivity = this.profile.activities.get(id)!;
+    let temporatyId = existingActivity.id + "_temporary_copy";
+    let newActivity = {
+      ...existingActivity,
+      id: temporatyId,
+    };
+    
+    // Uff, this is very hacky, I don't like it:
+    this.profile.addActivity(newActivity);
+    await this.performEdit(temporatyId);
+    this.profile.activities.delete(temporatyId);
+    newActivity.id = this.createId(newActivity.title + "-" + newActivity.begin,  Array.from(this.profile.activities.keys()))
+    this.profile.addActivity(newActivity);
+  }
+
   async performAdd(): Promise<string> {
     console.log("Neue Aktivität eintragen:");
     this.initAnswers(ActivityCrud.questionsBeforeDate, {} as any);

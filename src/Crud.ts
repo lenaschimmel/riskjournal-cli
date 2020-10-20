@@ -30,7 +30,7 @@ export abstract class Crud {
         type: 'select',
         name: 'action',
         message: this.name + ' - Was möchtest du tun?',
-        choices: ["Anzeigen", "Bearbeiten", "Hinzufügen", "Löschen", "Zurück"]
+        choices: ["Anzeigen", "Bearbeiten", "Hinzufügen", "Duplizieren & Bearbeiten", "Löschen", "Zurück"]
       });
 
       switch (response.action) {
@@ -44,6 +44,9 @@ export abstract class Crud {
         case "Hinzufügen":
           await this.performAdd();
           break;
+        case "Duplizieren & Bearbeiten":
+          await this.showDuplicateMenu();
+          break;
         case "Löschen":
           await this.showDeleteMenu();
           break;
@@ -55,6 +58,7 @@ export abstract class Crud {
 
   abstract async printList(): Promise<void>;
   abstract async performEdit(id: string): Promise<void>;
+  abstract async performDuplicate(id: string): Promise<void>;
   abstract async performDelete(id: string): Promise<void>;
   abstract async performAdd(): Promise<string>;
   abstract getEntityChoices(): Array<{ name: string, message: string }>;
@@ -83,6 +87,26 @@ export abstract class Crud {
 
     if (response.id != "<Abbrechen>") {
       await this.performEdit(response.id);
+    }
+  }
+
+
+  async showDuplicateMenu() {
+    let ids = this.getEntityChoices();
+    if (ids.length == 0) {
+      console.log("Keine " + this.name + " vorhanden.");
+      return;
+    }
+
+    const response = await prompt({
+      type: 'select',
+      name: 'id',
+      message: this.name + ' - Welchen Eintrag möchtest du duplizieren und dann bearbeiten?',
+      choices: ["<Abbrechen>", ...ids]
+    });
+
+    if (response.id != "<Abbrechen>") {
+      await this.performDuplicate(response.id);
     }
   }
 

@@ -102,6 +102,10 @@ export class PersonCrud extends Crud {
     return person.id;
   }
 
+  async performDuplicate(id: string): Promise<void> {
+    console.log("Noch nicht fertig.");
+  }
+
   getEntityChoices(): Array<{ name: string, message: string }> {
     return this.profile.getPersonChoices();
   }
