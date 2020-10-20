@@ -143,7 +143,7 @@ export class ActivityCrud extends Crud {
     for (let dateWithoutTime of datesWithoutTime) {
       let activitiesOfTheDay = activityArray.filter(activity => { 
         let diff = Profile.dateWithoutTime(activity.begin).getTime() - dateWithoutTime.getTime();
-        return Math.abs(diff) < 3600 * 6;
+        return Math.abs(diff) < 3600 * 1000 * 6;
       });
       activitiesOfTheDay.sort((a, b) => a.begin.getTime() - b.begin.getTime());
 
@@ -245,7 +245,7 @@ export class ActivityCrud extends Crud {
     let activity = {
       id: this.createId(responseBeforeDate.title + "-" + beginDate,  Array.from(this.profile.activities.keys())),
       title:                    responseBeforeDate.title,
-      locationId:               responseAfterDate.locationId,
+      locationId:               responseBeforeDate.locationId,
       begin:                    new Date(beginDate),
       end:                      new Date(endDate),
       setting:                  responseAfterDate.setting,

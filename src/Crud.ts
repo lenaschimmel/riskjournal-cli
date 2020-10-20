@@ -60,7 +60,7 @@ export abstract class Crud {
   abstract getEntityChoices(): Array<{ name: string, message: string }>;
 
   createId(name: string, currentIds: Array<string>) {
-    name = name.toLowerCase().replace(" ", "_");
+    name = name.toLowerCase().replace("/ /g", "_");
     while (currentIds.includes(name)) {
       name = name + "_";
     }
