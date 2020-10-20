@@ -4,10 +4,15 @@ import { __spreadArrays } from 'tslib';
 import { ActivityCrud } from './ActivityCrud';
 import { PersonCrud } from './PersonCrud';
 import { LocationCrud } from './LocationCrud';
-import { Crud } from './Crud';
 const { prompt } = require('enquirer');
+import Table from 'cli-table3';
+import dateAndTime from 'date-and-time';
+const de = require('date-and-time/locale/de');
+dateAndTime.locale(de);
 
-import { throws } from 'assert';
+import { defaultValues, calculateLocationPersonAverage, calculatePersonRisk, calculateActivityRisk } from './data/calculate';
+import { Locations } from './data/location';
+import { inspect } from 'util';
 
 // Add support for Maps, from https://stackoverflow.com/a/56150320/39946
 function replacer(this: { [key: string]: any } , key: string, value: any) {
@@ -147,10 +152,13 @@ export default class Profile {
         type: 'select',
         name: 'action',
         message: 'Was möchtest du tun?',
-        choices: ["Aktivitäten…", "Orte…", "Personen…", "Speichern", "Speichern und Beenden"]
+        choices: ["Gesamtrikiso anzeigen", "Aktivitäten…", "Orte…", "Personen…", "Speichern", "Speichern und Beenden"]
       });
 
       switch (response.action) {
+        case "Gesamtrikiso anzeigen":
+          await this.showRiskAnalysis();
+          break;
         case "Aktivitäten…":
           await this.activityCrud?.showMenu();
           break;
@@ -170,5 +178,156 @@ export default class Profile {
           return;
       }
     }
+  }
+
+  async showRiskAnalysis() {
+    // From Feretti et al., "Quantifying SARS-CoV-2 transmission suggests epidemic control with digital contact tracing", Fig. 2
+    // First entry is 0 days after infection, without knowing if the case will be symtomatic or not
+    const transmissionProb = [0, 0.045, 0.13, 0.245, 0.35, 0.375, 0.34, 0.25, 0.15, 0.075, 0.025, 0.01, 0.001, 0];
+
+    const activityArray = Array.from(this.activities.values());
+
+    let table = new Table({
+      head: ['Datum', 'Risiko neu', 'Infektiosität', 'Fehler']
+    });
+
+    let incomingRisk: Array<number> = [];
+    let outgoingRisk: Array<number> = [];
+    let hasError: Array<boolean> = [];
+
+    
+    for (let offset = 42; offset >= 0; offset--) {
+      let date = new Date();
+      date.setDate(date.getDate() - offset);
+      date = Profile.dateWithoutTime(date);
+      incomingRisk[offset] = 0;
+
+      for (const [key, activity] of this.activities) {
+        let diff = Profile.dateWithoutTime(activity.begin).getTime() - date.getTime();
+        if (Math.abs(diff) < 3600 * 1000 * 6) { // 6 hours
+          let activityRisk = this.computeActivityRisk(activity);
+          if (activityRisk == null) {
+            hasError[offset] = true;
+          } else {
+            incomingRisk[offset] += activityRisk;
+          }
+        }
+      }
+    }
+
+    for (let offset = 28; offset >= 0; offset--) {
+      outgoingRisk[offset] = 0;
+      for (let incomingOffset = 28; incomingOffset >= 0; incomingOffset--) {
+        let daysSinceInfection = incomingOffset - offset;
+        if (daysSinceInfection >= 0 && daysSinceInfection <= 13) {
+          outgoingRisk[offset] += incomingRisk[incomingOffset] * transmissionProb[daysSinceInfection];
+        }
+      }
+
+      let date = new Date();
+      date.setDate(date.getDate() - offset);
+      date = Profile.dateWithoutTime(date);
+
+      table.push([
+        dateAndTime.format(date, 'dd, DD MMMM:'),
+        { content: Math.floor(incomingRisk[offset]), hAlign:'right' },
+        { content: Math.floor(outgoingRisk[offset]), hAlign:'right' },
+        hasError[offset] ? "!" : ""
+      ]);
+    }
+
+    console.log(table.toString());
+  }
+
+  computeActivityRisk(activity: PlainActivity): number | null {
+    // TODO refactor the calculation code from the original microCOVID project, or rewrite it,
+    // so that we can put in the combined person risk of all persons
+    let personRisk;
+    if (activity.unknownPersonCount > 0) {
+      let riskPerUnknownPerson = this.getPersonRisk(activity.unknownPersonRiskProfile, activity.locationId);
+      if (riskPerUnknownPerson == null) {
+        console.log("Konnte Risiko für unbekannte Personen nicht bestimmen.");
+        return null;
+      }
+      personRisk = activity.unknownPersonCount * riskPerUnknownPerson;
+    } else {
+      personRisk = 0;
+    }
+    
+    for (const personId of activity.knownPersonIds) {
+      let specificPersonRisk = this.getPersonRiskOnDay(personId, activity.begin);
+      if (specificPersonRisk == null) {
+        console.log("Konnte Risiko für " + personId + " nicht bestimmen.");
+        return null;
+      }
+      personRisk += specificPersonRisk;
+    }
+
+    let diffSeconds = (Math.floor(activity.end.getTime() - activity.begin.getTime())) / 1000;
+    let duration = diffSeconds / 60;
+
+    let calculatorData = {
+      ...defaultValues,
+      ...activity,
+      personCount: 1,
+      interaction: "oneTime",
+      duration: duration,
+    }
+
+    console.log("Berechne Risiko für " + inspect(calculatorData));
+    
+
+    let activityRisk = calculateActivityRisk(calculatorData);
+    if (activityRisk == null) {
+      console.log("Konnte Risiko für '" + activity.title + "' nicht bestimmen.");
+      return null;
+    }
+
+    console.log("personRisk: " + personRisk + ", activityRisk: " + activityRisk);
+
+    return personRisk * activityRisk;
+  }
+
+  /// Calculates the risk for non-specific person given their location and risk profile
+  getPersonRisk(riskProfile : string, locationId: string): number | null {
+    let location = this.locations.get(locationId)!;
+
+    let dataLocation = Locations[location.sub || location.top];
+
+    let calculatorData = {
+      ...defaultValues,
+      ...dataLocation,
+      topLocation: location.top,
+      subLocation: location.sub,
+      riskProfile: riskProfile,
+      personCount: 1,
+    }
+
+    console.log("Berechne Risiko für " + inspect(calculatorData));
+    
+    const averagePersonRisk = calculateLocationPersonAverage(calculatorData);
+    if (averagePersonRisk === null) {
+      console.log("No average risk");
+      return null;
+    }
+
+    // Person risk
+    let points = calculatePersonRisk(calculatorData, averagePersonRisk);
+    if (points === null) {
+      console.log("No person risk");
+      return null;
+    }
+    return points;
+  }
+
+  /// Calculates the risk for a specific person on a specific day
+  getPersonRiskOnDay(personId: string, date: Date): number | null {
+    let person = this.persons.get(personId)!;
+    if (!person) {
+      return null;
+    }
+    // TODO usually, we would now check if we have specific data from this person,
+    // and only if we don't, we would fall back to their risk profile
+    return this.getPersonRisk(person.riskProfile, person.locationId);
   }
 }
