@@ -111,7 +111,8 @@ export default class Profile {
 
   static dateWithoutTime(datetime: Date): Date {
     // from https://stackoverflow.com/a/38050824/39946
-    return new Date(Date.UTC(datetime.getUTCFullYear(), datetime.getUTCMonth(), datetime.getUTCDate()));
+    // but with local time zone
+    return new Date(datetime.getFullYear(), datetime.getMonth(), datetime.getDate());
   }
 
   getActivityChoices(): Array<{ name: string, message: string }> {
@@ -204,6 +205,24 @@ export default class Profile {
     }
   }
 
+    
+  computeOverlapWeeks(begin: Date, end: Date, day: Date): number {
+    return this.computeOverlapMilliseconds(begin, end, day) / (60 * 60 * 1000 * 24 * 7);
+  }
+  
+  computeOverlapMinutes(begin: Date, end: Date, day: Date): number {
+    return this.computeOverlapMilliseconds(begin, end, day) / (60 * 1000);
+  }
+  
+  computeOverlapMilliseconds(begin: Date, end: Date, day: Date): number {
+    let eventBeginTime = begin.getTime();
+    let eventEndTime   = end.getTime();
+    let dayBeginTime   = Profile.dateWithoutTime(day).getTime();
+    let dayEndTime     = dayBeginTime + 1000 * 3600 * 24;
+    
+    return Math.max(0, Math.min(dayEndTime, eventEndTime) - Math.max(dayBeginTime, eventBeginTime));
+  }
+
   async showRiskAnalysis() {
     // From Feretti et al., "Quantifying SARS-CoV-2 transmission suggests epidemic control with digital contact tracing", Fig. 2
     // First entry is 0 days after infection, without knowing if the case will be symtomatic or not
@@ -227,13 +246,27 @@ export default class Profile {
       incomingRisk[offset] = 0;
 
       for (const [key, activity] of this.activities) {
-        let diff = Profile.dateWithoutTime(activity.begin).getTime() - date.getTime();
-        if (Math.abs(diff) < 3600 * 1000 * 6) { // 6 hours
-          let activityRisk = this.computeActivityRisk(activity);
+        let overlapMinutes = this.computeOverlapMinutes(activity.begin, activity.end, date);
+
+        if (overlapMinutes > 0) {
+          let activityRisk = this.computeActivityRisk(activity, overlapMinutes);
           if (activityRisk == null) {
             hasError[offset] = true;
           } else {
             incomingRisk[offset] += activityRisk;
+          }
+        }
+      }
+
+      for (const [key, cohabitation] of this.cohabitations) {
+        let overlapWeeks = this.computeOverlapWeeks(cohabitation.begin, cohabitation.end, date);
+
+        if (overlapWeeks > 0) {
+          let cohabitationRisk = this.computeCohabitationRisk(cohabitation, overlapWeeks, date);
+          if (cohabitationRisk == null) {
+            hasError[offset] = true;
+          } else {
+            incomingRisk[offset] += cohabitationRisk;
           }
         }
       }
@@ -263,7 +296,7 @@ export default class Profile {
     console.log(table.toString());
   }
 
-  computeActivityRisk(activity: PlainActivity): number | null {
+  computeActivityRisk(activity: PlainActivity, duration: number): number | null {
     // TODO refactor the calculation code from the original microCOVID project, or rewrite it,
     // so that we can put in the combined person risk of all persons
     let personRisk;
@@ -287,9 +320,6 @@ export default class Profile {
       personRisk += specificPersonRisk;
     }
 
-    let diffSeconds = (Math.floor(activity.end.getTime() - activity.begin.getTime())) / 1000;
-    let duration = diffSeconds / 60;
-
     let calculatorData = {
       ...defaultValues,
       ...activity,
@@ -298,18 +328,39 @@ export default class Profile {
       duration: duration,
     }
 
-    console.log("Berechne Risiko für " + inspect(calculatorData));
-    
-
     let activityRisk = calculateActivityRisk(calculatorData);
     if (activityRisk == null) {
       console.log("Konnte Risiko für '" + activity.title + "' nicht bestimmen.");
       return null;
     }
 
-    console.log("personRisk: " + personRisk + ", activityRisk: " + activityRisk);
-
     return personRisk * activityRisk;
+  }
+
+
+  computeCohabitationRisk(cohabitation: PlainCohabitation, duration: number, date: Date): number | null {
+    // TODO refactor the calculation code from the original microCOVID project, or rewrite it,
+    // so that we can put in the combined person risk of all persons
+    let personRisk = this.getPersonRiskOnDay(cohabitation.knownPersonId, date);
+    if (personRisk == null) {
+      console.log("Konnte Risiko für " + cohabitation.knownPersonId + " nicht bestimmen.");
+      return null;
+    }
+    
+    let calculatorData = {
+      ...defaultValues,
+      ...cohabitation,
+      personCount: 1,
+      interaction: cohabitation.sleepingTogether ? "partner" : "repeated",
+    }
+
+    let activityRisk = calculateActivityRisk(calculatorData);
+    if (activityRisk == null) {
+      console.log("Konnte Risiko für '" + cohabitation.id + "' nicht bestimmen.");
+      return null;
+    }
+
+    return personRisk * activityRisk  * duration;
   }
 
   /// Calculates the risk for non-specific person given their location and risk profile
@@ -327,7 +378,7 @@ export default class Profile {
       personCount: 1,
     }
 
-    console.log("Berechne Risiko für " + inspect(calculatorData));
+    // console.log("Berechne Risiko für " + inspect(calculatorData));
     
     const averagePersonRisk = calculateLocationPersonAverage(calculatorData);
     if (averagePersonRisk === null) {

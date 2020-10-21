@@ -166,8 +166,9 @@ export class ActivityCrud extends Crud {
       }
     }
     let riskString = "unbekannt";
+    let duration = (activity.end.getTime() - activity.begin.getTime()) / (1000 * 60);
 
-    let risk = this.profile.computeActivityRisk(activity);
+    let risk = this.profile.computeActivityRisk(activity, duration);
     if (risk != null) {
       if (risk > 5) {
         riskString = Math.floor(risk) + " µCoV"
