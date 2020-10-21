@@ -1,9 +1,10 @@
-import { PlainActivity, PlainLocation, PlainPerson } from './PlainData';
+import { PlainActivity, PlainCohabitation, PlainLocation, PlainPerson } from './PlainData';
 import fs from 'fs';
 import { __spreadArrays } from 'tslib';
 import { ActivityCrud } from './ActivityCrud';
 import { PersonCrud } from './PersonCrud';
 import { LocationCrud } from './LocationCrud';
+import { CohabitationCrud } from './CohabitationCrud';
 const { prompt } = require('enquirer');
 import Table from 'cli-table3';
 import dateAndTime from 'date-and-time';
@@ -13,6 +14,7 @@ dateAndTime.locale(de);
 import { defaultValues, calculateLocationPersonAverage, calculatePersonRisk, calculateActivityRisk } from './data/calculate';
 import { Locations } from './data/location';
 import { inspect } from 'util';
+import { endianness } from 'os';
 
 // Add support for Maps, from https://stackoverflow.com/a/56150320/39946
 function replacer(this: { [key: string]: any } , key: string, value: any) {
@@ -38,31 +40,39 @@ function reviver(key: string, value: any) {
 }
 
 export default class Profile {
-  name: string;
-  persons: Map<string, PlainPerson>;
-  locations: Map<string, PlainLocation>;
-  activities: Map<string, PlainActivity>;
+  name         : string;
+  persons      : Map<string, PlainPerson>;
+  locations    : Map<string, PlainLocation>;
+  activities   : Map<string, PlainActivity>;
+  cohabitations: Map<string, PlainCohabitation>;
 
-  activityCrud: ActivityCrud | undefined;
-  locationCrud: LocationCrud | undefined;
-  personCrud: PersonCrud | undefined;
+  activityCrud    : ActivityCrud     | undefined;
+  locationCrud    : LocationCrud     | undefined;
+  personCrud      : PersonCrud       | undefined;
+  cohabitationCrud: CohabitationCrud | undefined;
 
   constructor(name: string) {
     this.name = name;
 
-    this.locations = this.loadFile("locations");
-    this.activities = this.loadFile("activities");
-    this.persons = this.loadFile("persons");
+    this.locations     = this.loadFile("locations");
+    this.activities    = this.loadFile("activities");
+    this.persons       = this.loadFile("persons");
+    this.cohabitations = this.loadFile("cohabitations");
     for (const [key, activity] of this.activities) {
       activity.begin = new Date(activity.begin)
-      activity.end = new Date(activity.end)
+      activity.end   = new Date(activity.end)
+    }   
+    for (const [key, cohabitation] of this.cohabitations) {
+      cohabitation.begin = new Date(cohabitation.begin)
+      cohabitation.end   = new Date(cohabitation.end)
     }
   }
 
   save() {
-    this.saveFile("locations", this.locations);
-    this.saveFile("activities", this.activities);
-    this.saveFile("persons", this.persons);
+    this.saveFile("locations"       , this.locations);
+    this.saveFile("activities"      , this.activities);
+    this.saveFile("persons"         , this.persons);
+    this.saveFile("cohabitations"   , this.cohabitations);
   }
 
   filename(kind: string): string {
@@ -95,8 +105,8 @@ export default class Profile {
     this.persons.set(person.id, person);
   }
 
-  computeRiskForActivity(id: string) {
-
+  addCohabitation(cohabitation: PlainCohabitation) {
+    this.cohabitations.set(cohabitation.id, cohabitation);
   }
 
   static dateWithoutTime(datetime: Date): Date {
@@ -114,6 +124,16 @@ export default class Profile {
 
   getPersonChoices(): Array<{ name: string, message: string }> {
     return Array.from(Array.from(this.persons.values()).map(person => ({ name: person.id, message: person.name })));
+  }
+
+  getCohabitationTitle(cohabitation: PlainCohabitation): string {
+    let begin = dateAndTime.format(cohabitation.begin, 'DD.MM.YY');
+    let end   = dateAndTime.format(cohabitation.end  , 'DD.MM.YY');
+    return "Mit " + this.persons.get(cohabitation.knownPersonId)?.name + " von " + begin +  " bis " + end;
+  }
+
+  getCohabitationChoices(): Array<{ name: string, message: string }> {
+    return Array.from(Array.from(this.cohabitations.values()).map(cohabitation => ({ name: cohabitation.id, message: this.getCohabitationTitle(cohabitation) })));
   }
 
   static getProfileChoices(): Array<{ message: string, name: string }> {
@@ -143,16 +163,17 @@ export default class Profile {
   }
 
   async showMenu() {
-    this.activityCrud = new ActivityCrud(this);
-    this.locationCrud = new LocationCrud(this);
-    this.personCrud = new PersonCrud(this);
+    this.activityCrud     = new ActivityCrud(this);
+    this.locationCrud     = new LocationCrud(this);
+    this.personCrud       = new PersonCrud(this);
+    this.cohabitationCrud = new CohabitationCrud(this);
 
     while (true) {
       const response = await prompt({
         type: 'select',
         name: 'action',
         message: 'Was möchtest du tun?',
-        choices: ["Gesamtrikiso anzeigen", "Aktivitäten…", "Orte…", "Personen…", "Speichern", "Speichern und Beenden"]
+        choices: ["Gesamtrikiso anzeigen", "Aktivitäten…", "Orte…", "Personen…", "Zusammenleben…", "Speichern", "Speichern und Beenden"]
       });
 
       switch (response.action) {
@@ -167,6 +188,9 @@ export default class Profile {
           break;
         case "Personen…":
           await this.personCrud?.showMenu();
+          break;
+        case "Zusammenleben…":
+          await this.cohabitationCrud?.showMenu();
           break;
         case "Speichern":
           this.save();

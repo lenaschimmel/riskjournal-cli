@@ -1,3 +1,5 @@
+import { StringifyOptions } from "querystring";
+
 export interface PlainActivity {
     id: string;
     title: string;
@@ -12,6 +14,14 @@ export interface PlainActivity {
     unknownPersonRiskProfile: string;
     knownPersonIds: Array<string>;
     locationId: string; //used as location for unknown persons
+}
+
+export interface PlainCohabitation {
+    id: string;
+    begin: Date;
+    end: Date;
+    knownPersonId: string;
+    sleepingTogether: boolean;
 }
 
 export interface PlainLocation {
