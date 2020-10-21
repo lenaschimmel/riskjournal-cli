@@ -220,6 +220,10 @@ export class ActivityCrud extends Crud {
     this.profile.activities.delete(id);
   }
 
+  createActivityId(newActivity: PlainActivity): string {
+    return this.createId(newActivity.title + "-" + dateAndTime.format(Profile.dateWithoutTime(newActivity.begin), "DD-MM-YY"),  Array.from(this.profile.activities.keys()))
+  }
+
   async performDuplicate(id: string): Promise<void> {
     let existingActivity = this.profile.activities.get(id)!;
     let temporatyId = existingActivity.id + "_temporary_copy";
@@ -232,7 +236,7 @@ export class ActivityCrud extends Crud {
     this.profile.addActivity(newActivity);
     await this.performEdit(temporatyId);
     this.profile.activities.delete(temporatyId);
-    newActivity.id = this.createId(newActivity.title + "-" + newActivity.begin,  Array.from(this.profile.activities.keys()))
+    newActivity.id = this.createActivityId(newActivity);
     this.profile.addActivity(newActivity);
   }
 
@@ -259,7 +263,7 @@ export class ActivityCrud extends Crud {
     }
 
     let activity = {
-      id: this.createId(responseBeforeDate.title + "-" + beginDate,  Array.from(this.profile.activities.keys())),
+      id:                       "",
       title:                    responseBeforeDate.title,
       locationId:               responseBeforeDate.locationId,
       begin:                    new Date(beginDate),
@@ -273,6 +277,7 @@ export class ActivityCrud extends Crud {
       unknownPersonRiskProfile: responseAfterDate.unknownPersonRiskProfile,
       knownPersonIds:           responseAfterDate.knownPersonIds,
     };
+    activity.id = this.createActivityId(activity),
 
     this.profile.addActivity(activity);
 
