@@ -133,25 +133,17 @@ export class ActivityCrud extends Crud {
 
     const activityArray = Array.from(this.profile.activities.values());
 
-    // gather all dates for which we have activities
-    let datesWithoutTime = activityArray.map(activity => Profile.dateWithoutTime(activity.begin));
-    // sort and remove duplicates, from https://stackoverflow.com/a/9229821/39946
-    datesWithoutTime.sort().filter(function (item, pos, ary) {
-      return !pos || item != ary[pos - 1];
-    });
+    activityArray.sort((a, b) => a.begin.getTime() - b.begin.getTime());
 
-    for (let dateWithoutTime of datesWithoutTime) {
-      let activitiesOfTheDay = activityArray.filter(activity => { 
-        let diff = Profile.dateWithoutTime(activity.begin).getTime() - dateWithoutTime.getTime();
-        return Math.abs(diff) < 3600 * 1000 * 6;
-      });
-      activitiesOfTheDay.sort((a, b) => a.begin.getTime() - b.begin.getTime());
-
-      table.push([{ colSpan: 5, content: dateAndTime.format(dateWithoutTime, 'dddd, DD MMMM YYYY') }]);
-
-      for (let activity of activitiesOfTheDay) {
-        table.push(this.getTableRowForActivity(activity));
+    let prevDate = null;
+    for (let activity of activityArray) {
+      let dateWithoutTime = Profile.dateWithoutTime(activity.begin);
+      if (prevDate != dateWithoutTime.getTime()) {
+        table.push([{ colSpan: 5, content: dateAndTime.format(dateWithoutTime, 'dddd, DD MMMM YYYY') }]);
+        prevDate = dateWithoutTime.getTime();
       }
+
+      table.push(this.getTableRowForActivity(activity));
     }
 
     console.log(table.toString());
@@ -167,17 +159,22 @@ export class ActivityCrud extends Crud {
 
     let participantsString = activity.knownPersonIds.map(personId => this.profile.persons.get(personId)?.name).join(",");
     if (activity.unknownPersonCount > 0) {
-      participantsString += " und " + activity.unknownPersonCount + " weitere"
+      if (activity.knownPersonIds.length > 0) {
+        participantsString += " und " + activity.unknownPersonCount + " weitere"
+      } else {
+        participantsString = activity.unknownPersonCount + " unbekannte"
+      }
     }
     let riskString = "unbekannt";
 
-    // if (!this.risk) {
-    //   this.calculateRisk();
-    // }
-
-    // if (this.risk) {
-    //   riskString = sprintf("%i µCoV", this.risk);
-    // }
+    let risk = this.profile.computeActivityRisk(activity);
+    if (risk != null) {
+      if (risk > 5) {
+        riskString = Math.floor(risk) + " µCoV"
+      } else {
+        riskString = (Math.floor(risk * 100) / 100) + " µCoV"
+      }
+    }
 
     let durationString = Profile.timeSpanString(activity.begin, activity.end);
     return [activity.title, locationString, participantsString, riskString, durationString];
