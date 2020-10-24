@@ -238,7 +238,8 @@ export default class Profile {
     let outgoingRisk: Array<number> = [];
     let hasError: Array<boolean> = [];
 
-    
+    let dataExport = [];
+
     for (let offset = 42; offset >= 0; offset--) {
       let date = new Date();
       date.setDate(date.getDate() - offset);
@@ -291,7 +292,11 @@ export default class Profile {
         { content: Math.floor(outgoingRisk[offset]), hAlign:'right' },
         hasError[offset] ? "!" : ""
       ]);
+
+      dataExport.push({ date: dateAndTime.format(date, "YYYY-MM-DD"), contagiosity: outgoingRisk[offset] });
     }
+
+    this.saveFile("export", dataExport);
 
     console.log(table.toString());
   }
@@ -401,8 +406,22 @@ export default class Profile {
     if (!person) {
       return null;
     }
+
+    if (person.profileName?.length >0) {
+      let filename = "data/" + person.profileName + "/export.json";
+      const rawData = fs.readFileSync(filename, { encoding: "utf8" });
+      let data = JSON.parse(rawData);
+      for (let record of data) {
+        // console.log(record.date + " == " + date + "   ==>>  " + new Date(record.date).getTime() + " == " + date.getTime());
+        if (Math.abs(new Date(record.date).getTime() - date.getTime()) < 8000000) {
+          return record.contagiosity;
+        }
+      }
+    }
+  
     // TODO usually, we would now check if we have specific data from this person,
     // and only if we don't, we would fall back to their risk profile
     return this.getPersonRisk(person.riskProfile, person.locationId);
+    
   }
 }

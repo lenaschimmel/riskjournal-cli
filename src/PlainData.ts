@@ -38,5 +38,6 @@ export interface PlainPerson {
     fullName: string;
     riskProfile: string;
     locationId: string;
+    profileName: string;
     timedRisk: Map<Date, number>; // TODO needes proper definition of which risk this is
 }

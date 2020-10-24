@@ -95,6 +95,7 @@ export class PersonCrud extends Crud {
       riskProfile: response.riskProfile,
       locationId: response.locationId,
       timedRisk: new Map(),
+      profileName: "",
     };
 
     this.profile.addPerson(person);
