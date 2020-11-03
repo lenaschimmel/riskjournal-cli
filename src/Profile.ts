@@ -8,6 +8,7 @@ import { CohabitationCrud } from './CohabitationCrud';
 const { prompt } = require('enquirer');
 import Table from 'cli-table3';
 import dateAndTime from 'date-and-time';
+import crypto  from "crypto";
 const de = require('date-and-time/locale/de');
 dateAndTime.locale(de);
 
@@ -15,6 +16,13 @@ import { defaultValues, calculateLocationPersonAverage, calculatePersonRisk, cal
 import { Locations } from './data/location';
 import { inspect } from 'util';
 import { endianness } from 'os';
+
+interface AnalysisDay {
+    date: Date,
+    incomingRisk: number,
+    outgoingRisk: number,
+    hasError: boolean
+}
 
 // Add support for Maps, from https://stackoverflow.com/a/56150320/39946
 function replacer(this: { [key: string]: any } , key: string, value: any) {
@@ -51,6 +59,9 @@ export default class Profile {
   personCrud      : PersonCrud       | undefined;
   cohabitationCrud: CohabitationCrud | undefined;
 
+  privateKey : string | undefined;
+  publicKey  : string | undefined;
+
   constructor(name: string) {
     this.name = name;
 
@@ -66,17 +77,18 @@ export default class Profile {
       cohabitation.begin = new Date(cohabitation.begin)
       cohabitation.end   = new Date(cohabitation.end)
     }
+    this.initKeys();
   }
 
   save() {
-    this.saveFile("locations"       , this.locations);
-    this.saveFile("activities"      , this.activities);
-    this.saveFile("persons"         , this.persons);
-    this.saveFile("cohabitations"   , this.cohabitations);
+    this.saveObject("locations"       , this.locations);
+    this.saveObject("activities"      , this.activities);
+    this.saveObject("persons"         , this.persons);
+    this.saveObject("cohabitations"   , this.cohabitations);
   }
 
-  filename(kind: string): string {
-    return "data/" + this.name + "/" + kind + ".json";
+  filename(kind: string, ending: string = "json"): string {
+    return "data/" + this.name + "/" + kind + "." + ending;
   }
 
   loadFile(kind: string) {
@@ -88,10 +100,19 @@ export default class Profile {
     }
   }
 
-  saveFile(kind: string, value: object) {
+  saveObject(kind: string, value: object, ending: string = "json") {
     const data = JSON.stringify(value, replacer, 2);
-    fs.writeFileSync(this.filename(kind), data, { encoding: "utf8" });
+    this.saveString(kind, data, ending);
   }
+
+  saveString(kind: string, value: string, ending: string = "json") {
+    fs.writeFileSync(this.filename(kind, ending), value, { encoding: "utf8" });
+  }
+
+  saveBuffer(kind: string, value: Buffer, ending: string = "json") {
+    fs.writeFileSync(this.filename(kind, ending), value);
+  }
+
 
   addActivity(activity: PlainActivity) {
     this.activities.set(activity.id, activity);
@@ -174,12 +195,13 @@ export default class Profile {
         type: 'select',
         name: 'action',
         message: 'Was möchtest du tun?',
-        choices: ["Gesamtrikiso anzeigen", "Aktivitäten…", "Orte…", "Personen…", "Zusammenleben…", "Speichern", "Speichern und Beenden"]
+        choices: ["Gesamtrikiso anzeigen", "Aktivitäten…", "Orte…", "Personen…", "Zusammenleben…", "Speichern und Exportieren", "Speichern, Exportieren und Beenden"]
       });
 
       switch (response.action) {
         case "Gesamtrikiso anzeigen":
-          await this.showRiskAnalysis();
+          let analysis = await this.computeRiskAnalysis();
+          await this.showRiskAnalysis(analysis);
           break;
         case "Aktivitäten…":
           await this.activityCrud?.showMenu();
@@ -193,12 +215,14 @@ export default class Profile {
         case "Zusammenleben…":
           await this.cohabitationCrud?.showMenu();
           break;
-        case "Speichern":
+        case "Speichern und Exportieren":
           this.save();
+          await this.export();
           console.log("Profil wurde gepspeichert.");
           break;
-        case "Speichern und Beenden":
+        case "Speichern, Exportieren und Beenden":
           this.save();
+          await this.export();
           console.log("Profil wurde gepspeichert. Tschüss!");
           return;
       }
@@ -223,22 +247,91 @@ export default class Profile {
     return Math.max(0, Math.min(dayEndTime, eventEndTime) - Math.max(dayBeginTime, eventBeginTime));
   }
 
-  async showRiskAnalysis() {
+  async showRiskAnalysis(analysis: Array<AnalysisDay>) {
+    // let analysis = await this.computeRiskAnalysis();
+    let table = new Table({
+      head: ['Datum', 'Risiko neu', 'Infektiosität', 'Fehler']
+    });
+
+    for (let offset = 28; offset >= 0; offset--) {
+      let data = analysis[offset];
+      table.push([
+        dateAndTime.format(data.date, 'dd, DD MMMM:'),
+        { content: Math.floor(data.incomingRisk), hAlign:'right' },
+        { content: Math.floor(data.outgoingRisk), hAlign:'right' },
+        data.hasError ? "!" : ""
+      ]);
+    }
+
+    console.log(table.toString());
+  }
+
+  async export() {
+    let anaylsis = await this.computeRiskAnalysis();
+    await this.exportRiskAnalysis(anaylsis);
+    for (const person of this.persons.values()) {
+      if (person.publicKey?.length > 0) {
+        await this.exportRiskAnalysisEnc(anaylsis, person);
+      }
+    }
+  }
+
+  async exportRiskAnalysis(analysis: Array<AnalysisDay>) {
+    let dataExport = [];
+    for (let offset = 28; offset >= 0; offset--) {
+      let data = analysis[offset];
+      dataExport.push({ date: dateAndTime.format(data.date, "YYYY-MM-DD"), contagiosity: data.outgoingRisk });
+    }
+    this.saveObject("export", dataExport);
+  }
+
+  async exportRiskAnalysisEnc(analysis: Array<AnalysisDay>, recipient: PlainPerson) {
+
+    let unencrypedData = Buffer.alloc(4 + 29 * 2);
+
+    unencrypedData.writeUInt32LE(analysis[28].date.getTime() / 1000, 0);
+    
+    for (let offset = 28; offset >= 0; offset--) {
+      let data = analysis[offset];
+      unencrypedData.writeUInt16LE(data.outgoingRisk, 4 + 2 * (28 - offset));
+    }
+    
+    const encryptedData = crypto.publicEncrypt(
+      {
+        key: recipient.publicKey,
+        padding: crypto.constants.RSA_PKCS1_OAEP_PADDING,
+        oaepHash: "sha256",
+      },
+      // We convert the data string to a buffer using `Buffer.from`
+      unencrypedData
+    )
+
+    const signature = crypto.sign("sha256", encryptedData, {
+      key: this.privateKey!,
+      padding: crypto.constants.RSA_PKCS1_PSS_PADDING,
+    })
+
+    this.saveBuffer("export", unencrypedData, "unenc");
+    this.saveBuffer("export_for_" + recipient.profileName.toLowerCase(), encryptedData,  "enc");
+    this.saveBuffer("export_for_" + recipient.profileName.toLowerCase(), signature,  "sign");
+
+    // TODO either concatenate encryptedData and signature into a single file (each are 256 byte)
+    // or use the recipients key with crypto.privateEncrypt for double encryption instead of
+    // a proper signature.
+  }
+
+  async computeRiskAnalysis(): Promise<Array<AnalysisDay>> {
     // From Feretti et al., "Quantifying SARS-CoV-2 transmission suggests epidemic control with digital contact tracing", Fig. 2
     // First entry is 0 days after infection, without knowing if the case will be symtomatic or not
     const transmissionProb = [0, 0.045, 0.13, 0.245, 0.35, 0.375, 0.34, 0.25, 0.15, 0.075, 0.025, 0.01, 0.001, 0];
 
     const activityArray = Array.from(this.activities.values());
 
-    let table = new Table({
-      head: ['Datum', 'Risiko neu', 'Infektiosität', 'Fehler']
-    });
-
     let incomingRisk: Array<number> = [];
     let outgoingRisk: Array<number> = [];
     let hasError: Array<boolean> = [];
 
-    let dataExport = [];
+    let ret: Array<AnalysisDay> = [];
 
     for (let offset = 42; offset >= 0; offset--) {
       let date = new Date();
@@ -273,9 +366,9 @@ export default class Profile {
       }
     }
 
-    for (let offset = 28; offset >= 0; offset--) {
+    for (let offset = 0; offset <= 28; offset++) {
       outgoingRisk[offset] = 0;
-      for (let incomingOffset = 28; incomingOffset >= 0; incomingOffset--) {
+      for (let incomingOffset = 42; incomingOffset >= 0; incomingOffset--) {
         let daysSinceInfection = incomingOffset - offset;
         if (daysSinceInfection >= 0 && daysSinceInfection <= 13) {
           outgoingRisk[offset] += incomingRisk[incomingOffset] * transmissionProb[daysSinceInfection];
@@ -286,19 +379,15 @@ export default class Profile {
       date.setDate(date.getDate() - offset);
       date = Profile.dateWithoutTime(date);
 
-      table.push([
-        dateAndTime.format(date, 'dd, DD MMMM:'),
-        { content: Math.floor(incomingRisk[offset]), hAlign:'right' },
-        { content: Math.floor(outgoingRisk[offset]), hAlign:'right' },
-        hasError[offset] ? "!" : ""
-      ]);
-
-      dataExport.push({ date: dateAndTime.format(date, "YYYY-MM-DD"), contagiosity: outgoingRisk[offset] });
+      ret.push({
+        date,
+        incomingRisk: incomingRisk[offset],
+        outgoingRisk: outgoingRisk[offset],
+        hasError: hasError[offset]
+      });  
     }
-
-    this.saveFile("export", dataExport);
-
-    console.log(table.toString());
+    
+    return ret;
   }
 
   computeActivityRisk(activity: PlainActivity, duration: number): number | null {
@@ -423,5 +512,31 @@ export default class Profile {
     // and only if we don't, we would fall back to their risk profile
     return this.getPersonRisk(person.riskProfile, person.locationId);
     
+  }
+
+  initKeys() {
+    try {
+      this.privateKey = fs.readFileSync(this.filename("private", "key"), { encoding: "utf8" });
+      this.publicKey  = fs.readFileSync(this.filename("public",  "key"), { encoding: "utf8" });
+    } catch (e) {
+      console.log("Konnte Schlüsselpaar nicht lesen, erzeuge neues…");
+      const { publicKey, privateKey } = crypto.generateKeyPairSync("rsa", {
+        // The standard secure default length for RSA keys is 2048 bits
+        modulusLength: 2048,
+        publicKeyEncoding: {
+          type: 'spki',
+          format: 'pem'
+        },
+        privateKeyEncoding: {
+          type: 'pkcs8',
+          format: 'pem',
+        }
+      })
+      this.privateKey = privateKey;
+      this.publicKey  = publicKey;
+      fs.writeFileSync(this.filename("private", "key"), this.privateKey, { encoding: "utf8" });
+      fs.writeFileSync(this.filename("public" , "key"), this.publicKey , { encoding: "utf8" });
+      console.log("Neues Schlüsselpaar wurde erzeugt und geschrieben.");
+    }
   }
 }
