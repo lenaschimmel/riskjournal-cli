@@ -8,17 +8,18 @@ Heavily inspired and based on the the great [microCOVID](https://github.com/micr
 <!-- TABLE OF CONTENTS -->
 ## Table of Contents
 
-- [Table of Contents](#table-of-contents)
-- [About The Project](#about-the-project)
-- [Getting Started](#getting-started)
-  - [Prerequisites](#prerequisites)
-  - [Installation](#installation)
-- [Usage](#usage)
-- [Roadmap](#roadmap)
-- [Contributing](#contributing)
-- [License](#license)
-- [Contact](#contact)
-- [Acknowledgements](#acknowledgements)
+- [microCOVID CLI<](#microcovid-cli)
+  - [Table of Contents](#table-of-contents)
+  - [About The Project](#about-the-project)
+  - [Getting Started](#getting-started)
+    - [Prerequisites](#prerequisites)
+    - [Installation](#installation)
+  - [Usage](#usage)
+  - [Roadmap](#roadmap)
+  - [Contributing](#contributing)
+  - [License](#license)
+  - [Contact](#contact)
+  - [Acknowledgements](#acknowledgements)
 
 
 
@@ -41,12 +42,13 @@ _To be defined_
 
 ### Prerequisites
 
-This is an example of how to list things you need to use the software and how to install them.
 * nodejs
 * npm
 ```sh
 npm install npm@latest -g
 ```
+
+To update the prevalence data, you will also need python 3.6 or newer. When you run `update_prevalence.py`, it will check if your virutal env is setup correctly and help you to fix it if needed.
 
 ### Installation
 
