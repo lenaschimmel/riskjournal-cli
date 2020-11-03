@@ -77,6 +77,7 @@ export class PersonCrud extends Crud {
 
   async performAdd(): Promise<string> {
     console.log("Neue Person anlegen:");
+    PersonCrud.locationQuestion.choices = [...this.profile.getLocationChoices(), { message: "<Neuer Ort>", name: "<new>" }];
     this.initAnswers(PersonCrud.questions, {} as any);
     const response = await prompt(PersonCrud.questions);
 
