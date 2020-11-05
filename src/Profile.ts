@@ -113,6 +113,9 @@ export default class Profile {
     fs.writeFileSync(this.filename(kind, ending), value);
   }
 
+  loadBuffer(kind: string, ending: string = "json"): Buffer {
+    return fs.readFileSync(this.filename(kind, ending));
+  }
 
   addActivity(activity: PlainActivity) {
     this.activities.set(activity.id, activity);
@@ -195,7 +198,7 @@ export default class Profile {
         type: 'select',
         name: 'action',
         message: 'Was möchtest du tun?',
-        choices: ["Gesamtrikiso anzeigen", "Aktivitäten…", "Orte…", "Personen…", "Zusammenleben…", "Speichern und Exportieren", "Speichern, Exportieren und Beenden"]
+        choices: ["Gesamtrikiso anzeigen", "Aktivitäten…", "Orte…", "Personen…", "Zusammenleben…", "Fremdes Risiko anzeigen…", "Speichern und Exportieren", "Speichern, Exportieren und Beenden"]
       });
 
       switch (response.action) {
@@ -214,6 +217,9 @@ export default class Profile {
           break;
         case "Zusammenleben…":
           await this.cohabitationCrud?.showMenu();
+          break;
+        case "Fremdes Risiko anzeigen…":
+          await this.showExternalRiskAnalysis();
           break;
         case "Speichern und Exportieren":
           this.save();
@@ -286,14 +292,19 @@ export default class Profile {
   }
 
   async exportRiskAnalysisEnc(analysis: Array<AnalysisDay>, recipient: PlainPerson) {
+    let daysCount = 29;
+    let unencrypedData = Buffer.alloc(9 + daysCount * 2);
 
-    let unencrypedData = Buffer.alloc(4 + 29 * 2);
-
-    unencrypedData.writeUInt32LE(analysis[28].date.getTime() / 1000, 0);
+    unencrypedData.writeInt8('M'.charCodeAt(0), 0);
+    unencrypedData.writeInt8('C'.charCodeAt(0), 1);
+    unencrypedData.writeInt8('A'.charCodeAt(0), 2);
+    unencrypedData.writeInt8(1, 3); // File format version
+    unencrypedData.writeUInt32LE(analysis[daysCount - 1].date.getTime() / 1000, 4);
+    unencrypedData.writeInt8(daysCount, 8);
     
-    for (let offset = 28; offset >= 0; offset--) {
+    for (let offset = daysCount - 1; offset >= 0; offset--) {
       let data = analysis[offset];
-      unencrypedData.writeUInt16LE(data.outgoingRisk, 4 + 2 * (28 - offset));
+      unencrypedData.writeUInt16LE(data.outgoingRisk, 9 + 2 * (daysCount - 1 - offset));
     }
     
     const encryptedData = crypto.publicEncrypt(
@@ -306,19 +317,106 @@ export default class Profile {
       unencrypedData
     )
 
-    const signature = crypto.sign("sha256", encryptedData, {
-      key: this.privateKey!,
-      padding: crypto.constants.RSA_PKCS1_PSS_PADDING,
-    })
+    // const signature = crypto.sign("sha256", encryptedData, {
+    //   key: this.privateKey!,
+    //   padding: crypto.constants.RSA_PKCS1_PSS_PADDING,
+    // })
+
+    const signedData = crypto.privateEncrypt(
+      {
+        key: this.privateKey!,
+        padding: crypto.constants.RSA_NO_PADDING
+      },
+      encryptedData
+    );
 
     this.saveBuffer("export", unencrypedData, "unenc");
     this.saveBuffer("export_for_" + recipient.profileName.toLowerCase(), encryptedData,  "enc");
-    this.saveBuffer("export_for_" + recipient.profileName.toLowerCase(), signature,  "sign");
+    this.saveBuffer("export_for_" + recipient.profileName.toLowerCase(), signedData,  "sign");
 
     // TODO either concatenate encryptedData and signature into a single file (each are 256 byte)
     // or use the recipients key with crypto.privateEncrypt for double encryption instead of
     // a proper signature.
   }
+
+  async showExternalRiskAnalysis() {
+    let ids = this.getPersonChoices();
+    if (ids.length == 0) {
+      console.log("Keine Personen vorhanden.");
+      return;
+    }
+
+    const response = await prompt({
+      type: 'select',
+      name: 'id',
+      message: "Wähle aus, von welcher Person die Daten gelesen werden sollen.",
+      choices: ["<Abbrechen>", ...ids]
+    });
+
+    if (response.id != "<Abbrechen>") {
+      let person = this.persons.get(response.id)!;
+      let analysis = this.loadRiskAnalysisEnc(person);
+      await this.showRiskAnalysis(analysis!);
+    }
+  }
+
+  loadRiskAnalysisEnc(sender: PlainPerson): Array<AnalysisDay> | null {
+    try {
+      let analysis: Array<AnalysisDay> = [];
+      
+      let signedData = fs.readFileSync("data/" + sender.profileName + "/" + "export_for_" + this.name.toLowerCase() + "." + "sign");
+      let encryptedData = crypto.publicDecrypt(
+        {
+          key: sender.publicKey,
+          padding: crypto.constants.RSA_NO_PADDING
+        },
+        signedData);
+
+      this.saveBuffer("from_signed", encryptedData,  "enc");
+      
+      let decryptedData = crypto.privateDecrypt(
+        {
+          key: this.privateKey!,
+          padding: crypto.constants.RSA_PKCS1_OAEP_PADDING,
+          oaepHash: "sha256",
+        },
+        encryptedData);
+
+      if(decryptedData.readInt8(0) != 'M'.charCodeAt(0) ||
+         decryptedData.readInt8(1) != 'C'.charCodeAt(0) || 
+         decryptedData.readInt8(2) != 'A'.charCodeAt(0)) {
+          throw new Error("Magic bytes at the beginning are wrong.");
+      }
+      let version = decryptedData.readInt8(3);
+      if(version != 1) {
+        throw new Error("Can only read version 1, but version is " + version);
+      }
+      let firstDate = new Date(decryptedData.readUInt32LE(4) * 1000);
+      let daysCount = decryptedData.readInt8(8);
+      
+      console.log("Habe Daten gelesen, erstes Datum ist: " + firstDate.toDateString());
+
+      for (let offset = daysCount - 1; offset >= 0; offset--) {
+        let risk = decryptedData.readUInt16LE(9 + 2 * (daysCount - 1 - offset));
+        analysis[offset] = {
+          date: this.addDays(firstDate, daysCount - 1 - offset),
+          incomingRisk: 0,
+          outgoingRisk: risk,
+          hasError: false
+        }
+      }
+      return analysis;
+    } catch (e) {
+      console.log("Fehler beim Lesen: " + e);
+    }
+    return null;
+  }
+
+  addDays(inDate: Date, days: number) {
+    var date = new Date(inDate.valueOf());
+    date.setDate(date.getDate() + days);
+    return date;
+}
 
   async computeRiskAnalysis(): Promise<Array<AnalysisDay>> {
     // From Feretti et al., "Quantifying SARS-CoV-2 transmission suggests epidemic control with digital contact tracing", Fig. 2
