@@ -16,6 +16,8 @@ import { defaultValues, calculateLocationPersonAverage, calculatePersonRisk, cal
 import { Locations } from './data/location';
 import { inspect } from 'util';
 import { endianness } from 'os';
+import https from 'https';
+import http from 'http';
 
 interface AnalysisDay {
     date: Date,
@@ -334,9 +336,35 @@ export default class Profile {
     this.saveBuffer("export_for_" + recipient.profileName.toLowerCase(), encryptedData,  "enc");
     this.saveBuffer("export_for_" + recipient.profileName.toLowerCase(), signedData,  "sign");
 
-    // TODO either concatenate encryptedData and signature into a single file (each are 256 byte)
-    // or use the recipients key with crypto.privateEncrypt for double encryption instead of
-    // a proper signature.
+    const hash = crypto.createHash('sha256');
+    hash.update(this.publicKey!);
+    hash.update(recipient.publicKey);
+    let messageId = hash.digest('hex');
+    await this.postToServer(messageId, signedData);
+  }
+
+  async postToServer(messageId: String, data: Buffer) {
+    const options = {
+      hostname: '127.0.0.1',
+      port: 26843,
+      path: '/' + messageId,
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/octet-stream',
+        'Content-Length': data.length
+      }
+    }
+
+    const req = http.request(options, res => {
+      console.log(`statusCode: ${res.statusCode}`)
+    })
+    
+    req.on('error', error => {
+      console.error(error)
+    })
+    
+    req.write(data)
+    req.end()
   }
 
   async showExternalRiskAnalysis() {
