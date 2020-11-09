@@ -93,6 +93,6 @@ Thumbs.db
 
 # Project specific files
 Notes.md
-data/
+/data/
 .venv/
 .prevalence_data.json
