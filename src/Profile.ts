@@ -634,10 +634,7 @@ export default class Profile {
       }
     }
   
-    // TODO usually, we would now check if we have specific data from this person,
-    // and only if we don't, we would fall back to their risk profile
-    return this.getPersonRisk(person.riskProfile, person.locationId);
-    
+    return this.getPersonRisk(person.riskProfile, person.locationId);  
   }
 
   initKeys() {
