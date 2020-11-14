@@ -1,5 +1,5 @@
 <!-- PROJECT LOGO -->
-# microCOVID CLI<
+# RiskJournal CLI
 A command line client to log activities and their risk of contracting COVID-19.<br/>
 
 Heavily inspired and based on the the great [microCOVID](https://github.com/microcovid/microcovid).
@@ -8,7 +8,7 @@ Heavily inspired and based on the the great [microCOVID](https://github.com/micr
 <!-- TABLE OF CONTENTS -->
 ## Table of Contents
 
-- [microCOVID CLI<](#microcovid-cli)
+- [RiskJournal CLI<](#riskjournal-cli)
   - [Table of Contents](#table-of-contents)
   - [About The Project](#about-the-project)
   - [Getting Started](#getting-started)
@@ -54,7 +54,7 @@ To update the prevalence data, you will also need python 3.6 or newer. When you 
 
 1. Clone the repo
 ```sh
-git clone git@github.com:lenaschimmel/microcovid-cli.git
+git clone git@github.com:lenaschimmel/riskjournal-cli.git
 ```
 2. Install NPM packages
 ```sh
@@ -81,7 +81,7 @@ _To be defined_
 
 _To be defined_
 
-See the [open issues](https://github.com/lenaschimmel/microcovid-cli/issues) for a list of proposed features (and known issues).
+See the [open issues](https://github.com/lenaschimmel/riskjournal-cli/issues) for a list of proposed features (and known issues).
 
 
 
@@ -103,7 +103,7 @@ Distributed under the MIT License. See `LICENSE` for more information.
 
 Your Name - [@lenaschimmel](https://twitter.com/lenaschimmel) - mail@lenaschimmel.de
 
-Project Link: [https://github.com/lenaschimmel/microcovid-cli](https://github.com/lenaschimmel/microcovid-cli)
+Project Link: [https://github.com/lenaschimmel/riskjournal-cli](https://github.com/lenaschimmel/riskjournal-cli)
 
 
 
