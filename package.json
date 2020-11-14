@@ -1,7 +1,7 @@
 {
-  "name": "microcovid-cli",
+  "name": "riskjournal-cli",
   "version": "1.0.0",
-  "description": "CLI for the Microcovid project, will be a lib soon.",
+  "description": "CLI for the RiskJpurnal project, will be a lib soon.",
   "main": "build/index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
