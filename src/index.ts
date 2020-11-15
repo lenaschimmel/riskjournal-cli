@@ -6,8 +6,7 @@ import fs from 'fs';
 import https from 'https';
 import http from 'http';
 var targz = require('targz');
-
-const host = "http://127.0.0.1:26843/";
+import { BASE_URL} from './constants';
 
 var profile: Profile | null = null;
 
@@ -15,7 +14,7 @@ async function main() {
   console.log("Lade aktuelle Inzidenz-Werte herunter…");
   await downloadIncidence();
   console.log("…Inzidenz-Werte fertig.");
-  setInterval(downloadIncidence, 3600 * 1000); // 1 hour
+  let timer = setInterval(downloadIncidence, 3600 * 1000); // 1 hour
 
   let response = await prompt({
     type: 'select',
@@ -33,16 +32,14 @@ async function main() {
     fs.mkdirSync("./data/" + response.username);
   }
   profile = new Profile(response.username);
-
-  
-
-  //await profile.showMenu();
+  await profile.run();
+  clearInterval(timer);
 }
 
 async function downloadIncidence() {
   const filePath = "data/incidence/download.tar.gz";
   const dirPath = "data/incidence/";
-  http.get(host + "incidence", res => {
+  http.get(BASE_URL + "incidence", res => {
     let body = "";
     let stream = fs.createWriteStream(filePath);
     res.on("error", error => {
@@ -66,6 +63,5 @@ async function downloadIncidence() {
     });
   });
 }
-
 
 main();

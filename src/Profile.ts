@@ -9,6 +9,8 @@ const { prompt } = require('enquirer');
 import Table from 'cli-table3';
 import dateAndTime from 'date-and-time';
 import crypto  from "crypto";
+import { BASE_URL, HOST, PORT } from './constants';
+var targz = require('targz');
 const de = require('date-and-time/locale/de');
 dateAndTime.locale(de);
 
@@ -189,6 +191,13 @@ export default class Profile {
     return diffWeeks + " Wochen";
   }
 
+  async run() {
+    let timer = setInterval(() => { this.downloadExternalRisk(); }, 3600 * 1000); // 1 hour
+    this.downloadExternalRisk();
+    await this.showMenu();
+    clearInterval(timer);
+  }
+
   async showMenu() {
     this.activityCrud     = new ActivityCrud(this);
     this.locationCrud     = new LocationCrud(this);
@@ -309,6 +318,8 @@ export default class Profile {
       unencrypedData.writeUInt16LE(data.outgoingRisk, 9 + 2 * (daysCount - 1 - offset));
     }
     
+    this.saveBuffer("export", unencrypedData, "unenc");
+    
     const encryptedData = crypto.publicEncrypt(
       {
         key: recipient.publicKey,
@@ -319,6 +330,7 @@ export default class Profile {
       unencrypedData
     )
 
+    this.saveBuffer("export_for_" + recipient.profileName.toLowerCase(), encryptedData,  "enc");
     // const signature = crypto.sign("sha256", encryptedData, {
     //   key: this.privateKey!,
     //   padding: crypto.constants.RSA_PKCS1_PSS_PADDING,
@@ -332,21 +344,25 @@ export default class Profile {
       encryptedData
     );
 
-    this.saveBuffer("export", unencrypedData, "unenc");
-    this.saveBuffer("export_for_" + recipient.profileName.toLowerCase(), encryptedData,  "enc");
     this.saveBuffer("export_for_" + recipient.profileName.toLowerCase(), signedData,  "sign");
 
-    const hash = crypto.createHash('sha256');
-    hash.update(this.publicKey!);
-    hash.update(recipient.publicKey);
-    let messageId = hash.digest('hex');
+    let messageId = this.computeMessageId(this.publicKey!, recipient.publicKey);
+    
     await this.postToServer(messageId, signedData);
+  }
+
+  computeMessageId(senderKey: string, recipientKey: string): string {
+    const hash = crypto.createHash('sha256');
+    hash.update(senderKey);
+    hash.update(recipientKey);
+    let messageId = hash.digest('hex');
+    return messageId;
   }
 
   async postToServer(messageId: String, data: Buffer) {
     const options = {
-      hostname: '127.0.0.1',
-      port: 26843,
+      hostname: HOST,
+      port: PORT,
       path: '/' + messageId,
       method: 'POST',
       headers: {
@@ -391,8 +407,8 @@ export default class Profile {
   loadRiskAnalysisEnc(sender: PlainPerson): Array<AnalysisDay> | null {
     try {
       let analysis: Array<AnalysisDay> = [];
-      
-      let signedData = fs.readFileSync("data/" + sender.profileName + "/" + "export_for_" + this.name.toLowerCase() + "." + "sign");
+      let filePath = "data/" + this.name + "/imports/" + sender.profileName + ".risk";
+      let signedData = fs.readFileSync(filePath);
       let encryptedData = crypto.publicDecrypt(
         {
           key: sender.publicKey,
@@ -660,6 +676,34 @@ export default class Profile {
       fs.writeFileSync(this.filename("private", "key"), this.privateKey, { encoding: "utf8" });
       fs.writeFileSync(this.filename("public" , "key"), this.publicKey , { encoding: "utf8" });
       console.log("Neues Schlüsselpaar wurde erzeugt und geschrieben.");
+    }
+  }
+
+  downloadExternalRisk() {
+    for (const person of this.persons.values()) {
+      if (person.publicKey && person.publicKey.length > 1) {
+        console.log("Now updating external risk for " + person.profileName);
+        const filePath = "data/" + this.name + "/imports/" + person.profileName + ".risk";
+        let messageId = this.computeMessageId(person.publicKey, this.publicKey!);
+        http.get(BASE_URL + messageId, res => {
+          if (res.statusCode == 200) { 
+            let body = "";
+            let stream = fs.createWriteStream(filePath);
+            res.on("error", error => {
+              console.log("Download error: " + error);
+            });
+            res.on("data", data => {
+              stream.write(data);
+            });
+            res.on("end", () => {
+              stream.close();
+              console.log("Finished updating external risk for " + person.profileName);
+            });
+          } else {
+            console.log("Download status code: " + res.statusCode + " with message: " + res.statusMessage);
+          }
+        });
+      }
     }
   }
 }
