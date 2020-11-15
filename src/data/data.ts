@@ -1,5 +1,3 @@
-import { fixedPointPrecisionPercent } from './FormatPrecision'
-
 export interface FormValue {
   label: string
   multiplier: number
@@ -14,21 +12,15 @@ const housemateMult = 0.3
 const partnerMult = 0.48
 export const Interaction: { [key: string]: FormValue } = {
   oneTime: {
-    label: `One-time interaction [${fixedPointPrecisionPercent(
-      oneTimeMult,
-    )} chance of transmission per hour]`,
+    label: `One-time interaction [${oneTimeMult} chance of transmission per hour]`,
     multiplier: oneTimeMult,
   },
   repeated: {
-    label: `Household member [${fixedPointPrecisionPercent(
-      housemateMult,
-    )} chance of transmission per week]`,
+    label: `Household member [${housemateMult} chance of transmission per week]`,
     multiplier: housemateMult,
   },
   partner: {
-    label: `Partner / spouse [${fixedPointPrecisionPercent(
-      partnerMult,
-    )} chance of transmission per week]`,
+    label: `Partner / spouse [${partnerMult} chance of transmission per week]`,
     multiplier: partnerMult,
   },
 }

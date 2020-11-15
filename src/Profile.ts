@@ -15,7 +15,6 @@ const de = require('date-and-time/locale/de');
 dateAndTime.locale(de);
 
 import { defaultValues, calculateLocationPersonAverage, calculatePersonRisk, calculateActivityRisk } from './data/calculate';
-import { Locations } from './data/location';
 import { inspect } from 'util';
 import { endianness } from 'os';
 import https from 'https';
@@ -603,13 +602,16 @@ export default class Profile {
   getPersonRisk(riskProfile : string, locationId: string): number | null {
     let location = this.locations.get(locationId)!;
 
-    let dataLocation = Locations[location.sub || location.top];
-
+    
     let calculatorData = {
       ...defaultValues,
-      ...dataLocation,
       topLocation: location.top,
       subLocation: location.sub,
+      population: '',
+      casesPastWeek: 0,
+      casesIncreasingPercentage: 0,
+      positiveCasePercentage: 0,
+
       riskProfile: riskProfile,
       personCount: 1,
     }
