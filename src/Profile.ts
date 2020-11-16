@@ -10,6 +10,7 @@ import Table from 'cli-table3';
 import dateAndTime from 'date-and-time';
 import crypto  from "crypto";
 import { BASE_URL, HOST, PORT } from './constants';
+import DistrictData from './DistrictData';
 var targz = require('targz');
 const de = require('date-and-time/locale/de');
 dateAndTime.locale(de);
@@ -57,6 +58,8 @@ export default class Profile {
   activities   : Map<string, PlainActivity>;
   cohabitations: Map<string, PlainCohabitation>;
 
+  districtData: DistrictData;
+
   activityCrud    : ActivityCrud     | undefined;
   locationCrud    : LocationCrud     | undefined;
   personCrud      : PersonCrud       | undefined;
@@ -81,6 +84,7 @@ export default class Profile {
       cohabitation.end   = new Date(cohabitation.end)
     }
     this.initKeys();
+    this.districtData = new DistrictData();
   }
 
   save() {
@@ -146,6 +150,10 @@ export default class Profile {
     return Array.from(Array.from(this.activities.values()).map(activity => ({ name: activity.id, message: activity.title })));
   }
 
+  getDistrictChoices(): Array<{ name: string, message: string }> {
+    return this.districtData.getChoices();
+  } 
+  
   getLocationChoices(): Array<{ name: string, message: string }> {
     return Array.from(Array.from(this.locations.values()).map(location => ({ name: location.id, message: location.title })));
   }
@@ -536,7 +544,8 @@ export default class Profile {
     // so that we can put in the combined person risk of all persons
     let personRisk;
     if (activity.unknownPersonCount > 0) {
-      let riskPerUnknownPerson = this.getPersonRisk(activity.unknownPersonRiskProfile, activity.locationId);
+      let location = this.locations.get(activity.locationId);
+      let riskPerUnknownPerson = this.getPersonRisk(activity.unknownPersonRiskProfile, location!.idLandkreis, activity.begin);
       if (riskPerUnknownPerson == null) {
         console.log("Konnte Risiko für unbekannte Personen nicht bestimmen.");
         return null;
@@ -598,20 +607,14 @@ export default class Profile {
     return personRisk * activityRisk  * duration;
   }
 
-  /// Calculates the risk for non-specific person given their location and risk profile
-  getPersonRisk(riskProfile : string, locationId: string): number | null {
-    let location = this.locations.get(locationId)!;
-
+  /// Calculates the risk for non-specific person given their idLandkreis and risk profile
+  getPersonRisk(riskProfile : string, idLandkreis: string, date: Date): number | null {
     
     let calculatorData = {
       ...defaultValues,
-      topLocation: location.top,
-      subLocation: location.sub,
-      population: '',
-      casesPastWeek: 0,
-      casesIncreasingPercentage: 0,
-      positiveCasePercentage: 0,
-
+      topLocation: '',
+      subLocation: '',
+      ...this.districtData.getDataForCalculator(idLandkreis, date, "all"),
       riskProfile: riskProfile,
       personCount: 1,
     }
@@ -652,7 +655,7 @@ export default class Profile {
       }
     }
   
-    return this.getPersonRisk(person.riskProfile, person.locationId);  
+    return this.getPersonRisk(person.riskProfile, person.idLandkreis, date);  
   }
 
   initKeys() {

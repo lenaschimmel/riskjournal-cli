@@ -20,8 +20,15 @@ export class ActivityCrud extends Crud {
   static locationIdQuestion: Question = {
     type: 'select',
     name: 'locationId',
-    message: 'Wo findet die Aktivität statt?',
+    message: 'An welchem konkreten Ort findet die Aktivität statt?',
     hint: 'Wähle einen Eintrag aus der Liste oder lege einen neuen an. Ob es ein Innenraum ist oder nicht, kannst du gleich unabhängig auswählen.',
+    choices: [],
+  };
+
+  static idLandkreisQuestion: Question = {
+    type: 'select',
+    name: 'idLandkreis',
+    message: 'In welchem Landkreis findet die Aktivität statt?',
     choices: [],
   };
 
@@ -100,6 +107,7 @@ export class ActivityCrud extends Crud {
   static questionsBeforeDate: Array<Question> = [
     ActivityCrud.tileQuestion, 
     ActivityCrud.locationIdQuestion, 
+    // ActivityCrud.idLandkreisQuestion,
   ];
 
   static questionsAfterDate: Array<Question> = [
@@ -151,11 +159,8 @@ export class ActivityCrud extends Crud {
 
 
   getTableRowForActivity(activity: PlainActivity): Array<string> {
-    let locationString = "unbekannt";
-    let location = this.profile.locations.get(activity.locationId);
-    if (location) {
-      locationString = location.title;
-    }
+    let locationString = this.profile.activities.get(activity.locationId)?.title || "unbekannt";
+    // this.profile.districtData.getName(activity.idLandkreis);
 
     let participantsString = activity.knownPersonIds.map(personId => this.profile.persons.get(personId)?.name).join(",");
     if (activity.unknownPersonCount > 0) {
@@ -263,6 +268,7 @@ export class ActivityCrud extends Crud {
     let activity = {
       id:                       "",
       title:                    responseBeforeDate.title,
+      idLandkreis:              responseBeforeDate.idLandkreis,
       locationId:               responseBeforeDate.locationId,
       begin:                    new Date(beginDate),
       end:                      new Date(endDate),

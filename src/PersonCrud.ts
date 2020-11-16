@@ -18,11 +18,11 @@ export class PersonCrud extends Crud {
     hint: 'Name, den du z.B dem Gesundheitsamt mitteilen würdest.',
     initial: '<Gleicher Wert wie Alltagsname>'
   };
-  static locationQuestion = {
-    type: 'select',
-    name: 'locationId',
-    message: 'Gewöhnlicher Aufenthaltsort?',
-    choices: [{ message: "<Neuer Ort>", name: "<new>" }]
+  static districtQuestion = {
+    type: 'autocomplete',
+    name: 'idLandkreis',
+    message: 'Gewöhnlicher Aufenthaltsort (Landkreis)?',
+    choices: [{ message: "<Landkreise noch nicht geladen>", name: "<none>" }]
   };
   static riskProfileQuestion: Question = {
     type: 'select',
@@ -30,7 +30,7 @@ export class PersonCrud extends Crud {
     message: 'Risikoprofil?',
     choices: [ ]
   };
-  static questions: Array<Question> = [PersonCrud.nameQuestion, PersonCrud.fullNameQuestion, PersonCrud.locationQuestion, PersonCrud.riskProfileQuestion];
+  static questions: Array<Question> = [PersonCrud.nameQuestion, PersonCrud.fullNameQuestion, PersonCrud.districtQuestion, PersonCrud.riskProfileQuestion];
 
   constructor(profile: Profile) {
     super(profile, "Personen");
@@ -57,7 +57,7 @@ export class PersonCrud extends Crud {
 
   async performEdit(id: string): Promise<void> {
     console.log("Begin performEdit");
-    PersonCrud.locationQuestion.choices = [...this.profile.getLocationChoices(), { message: "<Neuer Ort>", name: "<new>" }];
+    PersonCrud.districtQuestion.choices = this.profile.getDistrictChoices();
     let person = this.profile.persons.get(id);
     this.initAnswers(PersonCrud.questions, person as any);
 
@@ -65,9 +65,6 @@ export class PersonCrud extends Crud {
     console.log("Before prompt performEdit");
     const response = await prompt(PersonCrud.questions, answers);
     console.log("After prompt performEdit");
-    if (response.locationId == "<new>") {
-      response.locationId = await this.profile.locationCrud?.performAdd();
-    }
     Object.assign(person, response);
   }
 
@@ -77,7 +74,7 @@ export class PersonCrud extends Crud {
 
   async performAdd(): Promise<string> {
     console.log("Neue Person anlegen:");
-    PersonCrud.locationQuestion.choices = [...this.profile.getLocationChoices(), { message: "<Neuer Ort>", name: "<new>" }];
+    PersonCrud.districtQuestion.choices = this.profile.getDistrictChoices();
     this.initAnswers(PersonCrud.questions, {} as any);
     const response = await prompt(PersonCrud.questions);
 
@@ -85,16 +82,12 @@ export class PersonCrud extends Crud {
       response.fullName = response.name;
     }
 
-    if (response.locationId == "<new>") {
-      response.locationId = await this.profile.locationCrud?.performAdd();
-    }
-
     let person = {
       id: this.createId(response.name, Array.from(this.profile.persons.keys())),
       name: response.name,
       fullName: response.fullName,
       riskProfile: response.riskProfile,
-      locationId: response.locationId,
+      idLandkreis: response.idLandkreis,
       timedRisk: new Map(),
       profileName: "",
       publicKey: "",

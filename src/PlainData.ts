@@ -13,7 +13,8 @@ export interface PlainActivity {
     unknownPersonCount: number;
     unknownPersonRiskProfile: string;
     knownPersonIds: Array<string>;
-    locationId: string; //used as location for unknown persons
+    locationId: string;
+    idLandkreis: string;
 }
 
 export interface PlainCohabitation {
@@ -28,8 +29,7 @@ export interface PlainLocation {
     id: string;
     title: string;
     city: string;
-    top: string;
-    sub: string;
+    idLandkreis: string;
 }
 
 export interface PlainPerson {
@@ -37,7 +37,7 @@ export interface PlainPerson {
     name: string;
     fullName: string;
     riskProfile: string;
-    locationId: string;
+    idLandkreis: string;
     profileName: string;
     publicKey: string;
     timedRisk: Map<Date, number>; // TODO needes proper definition of which risk this is

@@ -41,6 +41,7 @@ async function main() {
   } catch(e) {
     // we need this, or pressing crtl-c will push the node process into limbo.
     console.log("Cought top-level exception. Bye!");
+    console.log(e);
     process.exit(1);
   }
 }
