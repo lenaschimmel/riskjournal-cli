@@ -10,6 +10,10 @@ var targz = require('targz');
 import { BASE_URL} from './constants';
 require('trace-unhandled/register');
 
+import dateAndTime from 'date-and-time';
+const de = require('date-and-time/locale/de');
+dateAndTime.locale(de);
+
 var profileMenu: ProfileMenu | null = null;
 
 process.on('warning', e => console.warn(e.stack));

@@ -6,8 +6,6 @@ import { CohabitationCrud } from './CohabitationCrud';
 const { prompt } = require('enquirer');
 import Table from 'cli-table3';
 import dateAndTime from 'date-and-time';
-const de = require('date-and-time/locale/de');
-dateAndTime.locale(de);
 
 export default class ProfileMenu {
   profile: Profile;
@@ -20,10 +18,9 @@ export default class ProfileMenu {
     this.profile = new Profile(name);
   }
 
-
   async run() {
-    let timer = setInterval(() => { this.profile.downloadExternalRisk(); }, 3600 * 1000); // 1 hour
-    this.profile.downloadExternalRisk();
+    let timer = setInterval(() => { this.profile.cryptopNetwork.downloadExternalRisk(); }, 3600 * 1000); // 1 hour
+    this.profile.cryptopNetwork.downloadExternalRisk();
     await this.showMenu();
     clearInterval(timer);
   }
@@ -64,12 +61,12 @@ export default class ProfileMenu {
           break;
         case "Speichern und Exportieren":
           this.profile.save();
-          await this.profile.export();
+          await this.profile.cryptopNetwork.export();
           console.log("Profil wurde gepspeichert.");
           break;
         case "Speichern, Exportieren und Beenden":
           this.profile.save();
-          await this.profile.export();
+          await this.profile.cryptopNetwork.export();
           console.log("Profil wurde gepspeichert. Tschüss!");
           return;
       }
@@ -92,7 +89,7 @@ export default class ProfileMenu {
 
     if (response.id != "<Abbrechen>") {
       let person = this.profile.persons.get(response.id)!;
-      let analysis = this.profile.loadRiskAnalysisEnc(person);
+      let analysis = this.profile.cryptopNetwork.loadRiskAnalysisEnc(person);
       await this.showRiskAnalysis(analysis!);
     }
   }
