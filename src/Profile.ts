@@ -204,7 +204,7 @@ export class Profile {
     let personRisk;
     if (activity.unknownPersonCount > 0) {
       let location = this.locations.get(activity.locationId);
-      let riskPerUnknownPerson = this.getPersonRisk(activity.unknownPersonRiskProfile, location!.idLandkreis, activity.begin);
+      let riskPerUnknownPerson = this.getUnknownPersonRisk(activity.unknownPersonRiskProfile, location!.idLandkreis, activity.begin, "all");
       if (riskPerUnknownPerson == null) {
         console.log("Konnte Risiko für unbekannte Personen nicht bestimmen.");
         return null;
@@ -215,7 +215,7 @@ export class Profile {
     }
 
     for (const personId of activity.knownPersonIds) {
-      let specificPersonRisk = this.getPersonRiskOnDay(personId, activity.begin);
+      let specificPersonRisk = this.getSpecificPersonRisk(personId, activity.begin);
       if (specificPersonRisk == null) {
         console.log("Konnte Risiko für " + personId + " nicht bestimmen.");
         return null;
@@ -243,7 +243,7 @@ export class Profile {
   computeCohabitationRisk(cohabitation: PlainCohabitation, duration: number, date: Date): number | null {
     // TODO refactor the calculation code from the original microCOVID project, or rewrite it,
     // so that we can put in the combined person risk of all persons
-    let personRisk = this.getPersonRiskOnDay(cohabitation.knownPersonId, date);
+    let personRisk = this.getSpecificPersonRisk(cohabitation.knownPersonId, date);
     if (personRisk == null) {
       console.log("Konnte Risiko für " + cohabitation.knownPersonId + " nicht bestimmen.");
       return null;
@@ -266,7 +266,7 @@ export class Profile {
   }
 
   /// Calculates the risk for non-specific person given their idLandkreis and risk profile
-  getPersonRisk(riskProfile: string, idLandkreis: string, date: Date): number | null {
+  getUnknownPersonRisk(riskProfile: string, idLandkreis: string, date: Date, ageGroup: string): number | null {
 
     let calculatorData = {
       ...defaultValues,
@@ -295,7 +295,7 @@ export class Profile {
   }
 
   /// Calculates the risk for a specific person on a specific day
-  getPersonRiskOnDay(personId: string, date: Date): number | null {
+  getSpecificPersonRisk(personId: string, date: Date): number | null {
     let person = this.persons.get(personId)!;
     if (!person) {
       return null;
@@ -303,15 +303,18 @@ export class Profile {
 
     if (person.profileName?.length > 0) {
       let filename = "data/" + person.profileName + "/export.json";
-      const rawData = fs.readFileSync(filename, { encoding: "utf8" });
-      let data = JSON.parse(rawData);
-      for (let record of data) {
-        // console.log(record.date + " == " + date + "   ==>>  " + new Date(record.date).getTime() + " == " + date.getTime());
-        if (Math.abs(new Date(record.date).getTime() - date.getTime()) < 8000000) {
-          return record.contagiosity;
+      // TODO read and use encrypted risk data
+
+      let analysisDays = this.cryptopNetwork.loadRiskAnalysisEnc(person);
+      if (analysisDays) {
+        for (let analysisDay of analysisDays) {
+          if (Math.abs(new Date(analysisDay.date).getTime() - date.getTime()) < 8000000) { 
+            return analysisDay.outgoingRisk;
+          }
         }
       }
     }
-    return this.getPersonRisk(person.riskProfile, person.idLandkreis, date);
+
+    return this.getUnknownPersonRisk(person.riskProfile, person.idLandkreis, date, "all");
   }
 }
