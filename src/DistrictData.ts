@@ -76,8 +76,17 @@ export default class DistrictData {
     let dateString = dateAndTime.format(date, "YYYY-MM-DD");
     if (!district!.incidenceByDate.has(dateString)) {
       let minDate = Array.from(district!.incidenceByDate.keys()).sort()[0];
-      console.log("No incidence for " + dateString, " using " + minDate + " instead.");
-      dateString = minDate;
+      let maxDate = Array.from(district!.incidenceByDate.keys()).sort().reverse()[0];
+      if (dateString < minDate) {
+        // console.log("No incidence for " + dateString, " using minDate " + minDate + " instead.");
+        dateString = minDate;
+      } else if (dateString > maxDate) {
+        // console.log("No incidence for " + dateString, " using maxDate " + maxDate + " instead.");
+        dateString = maxDate;
+      } else {
+        console.log("No incidence for " + dateString, " but is not outside the known date range. Don't know what to do.");
+        throw new Error("No incidence for " + dateString);
+      }
     }
     return district!.incidenceByDate.get(dateString)!.get(ageGroup)! * 1;
   }
