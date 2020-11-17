@@ -1,5 +1,5 @@
 import { Crud, Question } from "./Crud";
-import Profile from "./Profile";
+import ProfileMenu from "./ProfileMenu";
 import { RiskProfile } from "./data/data";
 const { prompt } = require('enquirer');
 import lodash from "lodash";
@@ -32,8 +32,8 @@ export class PersonCrud extends Crud {
   };
   static questions: Array<Question> = [PersonCrud.nameQuestion, PersonCrud.fullNameQuestion, PersonCrud.districtQuestion, PersonCrud.riskProfileQuestion];
 
-  constructor(profile: Profile) {
-    super(profile, "Personen");
+  constructor(profileMenu: ProfileMenu) {
+    super(profileMenu, "Personen");
 
     if (PersonCrud.riskProfileQuestion.choices?.length == 0) {  
       for (const key in RiskProfile) {

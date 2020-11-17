@@ -1,35 +1,25 @@
 import { PlainActivity, PlainCohabitation, PlainLocation, PlainPerson } from './PlainData';
 import fs from 'fs';
 import { __spreadArrays } from 'tslib';
-import { ActivityCrud } from './ActivityCrud';
-import { PersonCrud } from './PersonCrud';
-import { LocationCrud } from './LocationCrud';
-import { CohabitationCrud } from './CohabitationCrud';
-const { prompt } = require('enquirer');
-import Table from 'cli-table3';
 import dateAndTime from 'date-and-time';
 import crypto from "crypto";
 import { BASE_URL, HOST, PORT } from './constants';
 import DistrictData from './DistrictData';
-var targz = require('targz');
 const de = require('date-and-time/locale/de');
 dateAndTime.locale(de);
 import { addDays, dateWithoutTime, computeOverlapMinutes, computeOverlapWeeks, replacer, reviver } from './Helpers';
 
 import { defaultValues, calculateLocationPersonAverage, calculatePersonRisk, calculateActivityRisk } from './data/calculate';
-import { inspect } from 'util';
-import { endianness } from 'os';
-import https from 'https';
 import http from 'http';
 
-interface AnalysisDay {
+export interface AnalysisDay {
   date: Date,
   incomingRisk: number,
   outgoingRisk: number,
   hasError: boolean
 }
 
-export default class Profile {
+export class Profile {
   name: string;
   persons: Map<string, PlainPerson>;
   locations: Map<string, PlainLocation>;
@@ -37,11 +27,6 @@ export default class Profile {
   cohabitations: Map<string, PlainCohabitation>;
 
   districtData: DistrictData;
-
-  activityCrud: ActivityCrud | undefined;
-  locationCrud: LocationCrud | undefined;
-  personCrud: PersonCrud | undefined;
-  cohabitationCrud: CohabitationCrud | undefined;
 
   privateKey: string | undefined;
   publicKey: string | undefined;
@@ -149,80 +134,6 @@ export default class Profile {
     return subDirs.filter(dir => dir.isDirectory()).map(dir => ({ message: dir.name, name: dir.name }));
   }
 
-  async run() {
-    let timer = setInterval(() => { this.downloadExternalRisk(); }, 3600 * 1000); // 1 hour
-    this.downloadExternalRisk();
-    await this.showMenu();
-    clearInterval(timer);
-  }
-
-  async showMenu() {
-    this.activityCrud = new ActivityCrud(this);
-    this.locationCrud = new LocationCrud(this);
-    this.personCrud = new PersonCrud(this);
-    this.cohabitationCrud = new CohabitationCrud(this);
-
-    while (true) {
-      const response = await prompt({
-        type: 'select',
-        name: 'action',
-        message: 'Was möchtest du tun?',
-        choices: ["Gesamtrikiso anzeigen", "Aktivitäten…", "Orte…", "Personen…", "Zusammenleben…", "Fremdes Risiko anzeigen…", "Speichern und Exportieren", "Speichern, Exportieren und Beenden"]
-      });
-
-      switch (response.action) {
-        case "Gesamtrikiso anzeigen":
-          let analysis = await this.computeRiskAnalysis();
-          await this.showRiskAnalysis(analysis);
-          break;
-        case "Aktivitäten…":
-          await this.activityCrud?.showMenu();
-          break;
-        case "Orte…":
-          await this.locationCrud?.showMenu();
-          break;
-        case "Personen…":
-          await this.personCrud?.showMenu();
-          break;
-        case "Zusammenleben…":
-          await this.cohabitationCrud?.showMenu();
-          break;
-        case "Fremdes Risiko anzeigen…":
-          await this.showExternalRiskAnalysis();
-          break;
-        case "Speichern und Exportieren":
-          this.save();
-          await this.export();
-          console.log("Profil wurde gepspeichert.");
-          break;
-        case "Speichern, Exportieren und Beenden":
-          this.save();
-          await this.export();
-          console.log("Profil wurde gepspeichert. Tschüss!");
-          return;
-      }
-    }
-  }
-
-  async showRiskAnalysis(analysis: Array<AnalysisDay>) {
-    // let analysis = await this.computeRiskAnalysis();
-    let table = new Table({
-      head: ['Datum', 'Risiko neu', 'Infektiosität', 'Fehler']
-    });
-
-    for (let offset = 28; offset >= 0; offset--) {
-      let data = analysis[offset];
-      table.push([
-        dateAndTime.format(data.date, 'dd, DD MMMM:'),
-        { content: Math.floor(data.incomingRisk), hAlign: 'right' },
-        { content: Math.floor(data.outgoingRisk), hAlign: 'right' },
-        data.hasError ? "!" : ""
-      ]);
-    }
-
-    console.log(table.toString());
-  }
-
   async export() {
     let anaylsis = await this.computeRiskAnalysis();
     await this.exportRiskAnalysis(anaylsis);
@@ -321,27 +232,6 @@ export default class Profile {
 
     req.write(data)
     req.end()
-  }
-
-  async showExternalRiskAnalysis() {
-    let ids = this.getPersonChoices();
-    if (ids.length == 0) {
-      console.log("Keine Personen vorhanden.");
-      return;
-    }
-
-    const response = await prompt({
-      type: 'select',
-      name: 'id',
-      message: "Wähle aus, von welcher Person die Daten gelesen werden sollen.",
-      choices: ["<Abbrechen>", ...ids]
-    });
-
-    if (response.id != "<Abbrechen>") {
-      let person = this.persons.get(response.id)!;
-      let analysis = this.loadRiskAnalysisEnc(person);
-      await this.showRiskAnalysis(analysis!);
-    }
   }
 
   loadRiskAnalysisEnc(sender: PlainPerson): Array<AnalysisDay> | null {

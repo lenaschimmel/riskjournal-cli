@@ -2,7 +2,8 @@ import { Interaction } from "./data/data";
 import { Crud, Question } from "./Crud";
 const { prompt } = require('enquirer');
 const datePrompt = require('date-prompt')
-import Profile from "./Profile";
+import { Profile } from "./Profile";
+import ProfileMenu from "./ProfileMenu";
 import moment from 'moment';
 import Table from 'cli-table3';
 import dateAndTime from 'date-and-time';
@@ -31,8 +32,8 @@ export class CohabitationCrud extends Crud {
     CohabitationCrud.sleepingTogetherQuestion, 
   ];
 
-  constructor(profile: Profile) {
-    super(profile, "Zusammenleben");
+  constructor(profileMenu: ProfileMenu) {
+    super(profileMenu, "Zusammenleben");
   }
 
   async printList(): Promise<void> {

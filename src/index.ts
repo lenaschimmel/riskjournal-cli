@@ -1,5 +1,6 @@
 import 'reflect-metadata';
-import Profile from './Profile';
+import { Profile } from './Profile';
+import ProfileMenu from './ProfileMenu';
 const { prompt } = require('enquirer');
 import { CalculatorData, calculate } from './data/calculate';
 import fs from 'fs';
@@ -9,7 +10,7 @@ var targz = require('targz');
 import { BASE_URL} from './constants';
 require('trace-unhandled/register');
 
-var profile: Profile | null = null;
+var profileMenu: ProfileMenu | null = null;
 
 process.on('warning', e => console.warn(e.stack));
 
@@ -35,8 +36,8 @@ async function main() {
       });
       fs.mkdirSync("./data/" + response.username);
     }
-    profile = new Profile(response.username);
-    await profile.run();
+    profileMenu = new ProfileMenu(response.username);
+    await profileMenu.run();
     clearInterval(timer);
   } catch(e) {
     // we need this, or pressing crtl-c will push the node process into limbo.

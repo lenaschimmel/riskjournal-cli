@@ -2,7 +2,8 @@ import { Setting, Interaction, Distance, TheirMask, YourMask, Voice, RiskProfile
 import { Crud, Question } from "./Crud";
 const { prompt } = require('enquirer');
 const datePrompt = require('date-prompt')
-import Profile from "./Profile";
+import { Profile } from "./Profile";
+import ProfileMenu from "./ProfileMenu";
 import moment from 'moment';
 import Table from 'cli-table3';
 import dateAndTime from 'date-and-time';
@@ -124,8 +125,8 @@ export class ActivityCrud extends Crud {
     ActivityCrud.unknownPersonRiskProfileQuestion
   ];
 
-  constructor(profile: Profile) {
-    super(profile, "Aktivitäten");
+  constructor(profileMenu: ProfileMenu) {
+    super(profileMenu, "Aktivitäten");
     
     ActivityCrud.unknownPersonRiskProfileQuestion.choices = this.getChoices(RiskProfile);
     ActivityCrud.settingQuestion.choices   = this.getChoices(Setting);
@@ -208,7 +209,7 @@ export class ActivityCrud extends Crud {
     const responseAfterDate = await prompt(ActivityCrud.questionsAfterDate, answers);
     console.log("After prompt performEdit");
     if (responseBeforeDate.locationId == "<new>") {
-      responseBeforeDate.locationId = await this.profile.locationCrud?.performAdd();
+      responseBeforeDate.locationId = await this.profileMenu.locationCrud?.performAdd();
     }
     if (responseAfterDate.knownPersonNew) {
       // response.locationId = await this.profile.locationCrud?.performAdd();
@@ -258,7 +259,7 @@ export class ActivityCrud extends Crud {
     const responseAfterDate = await prompt(ActivityCrud.questionsAfterDate);
 
     if (responseBeforeDate.locationId == "<new>") {
-      responseBeforeDate.locationId = await this.profile.locationCrud?.performAdd();
+      responseBeforeDate.locationId = await this.profileMenu.locationCrud?.performAdd();
     }
 
     if (responseAfterDate.knownPersonNew) {

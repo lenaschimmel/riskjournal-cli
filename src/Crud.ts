@@ -1,4 +1,5 @@
-import Profile from "./Profile";
+import { Profile } from "./Profile";
+import ProfileMenu from "./ProfileMenu";
 const { prompt } = require('enquirer');
 import { PlainActivity, PlainLocation, PlainPerson } from './PlainData';
 import { nodeModuleNameResolver } from "typescript";
@@ -17,10 +18,12 @@ export interface Question {
 
 export abstract class Crud {
   profile: Profile;
+  profileMenu: ProfileMenu;
   name: string;
 
-  constructor(profile: Profile, name: string) {
-    this.profile = profile;
+  constructor(profileMenu: ProfileMenu, name: string) {
+    this.profileMenu = profileMenu;
+    this.profile = profileMenu.profile;
     this.name = name;
   }
 

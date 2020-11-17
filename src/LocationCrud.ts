@@ -1,5 +1,5 @@
 import { Crud, Question } from "./Crud";
-import Profile from "./Profile";
+import ProfileMenu from "./ProfileMenu";
 const { prompt } = require('enquirer');
 import lodash from "lodash";
 
@@ -25,8 +25,8 @@ export class LocationCrud extends Crud {
 
   static questions: Array<Question> = [LocationCrud.titleQuestion, LocationCrud.cityQuestion, LocationCrud.districtQuestion];
 
-  constructor(profile: Profile) {
-    super(profile, "Orte");
+  constructor(profileMenu: ProfileMenu) {
+    super(profileMenu, "Orte");
   }
 
   async printList(): Promise<void> {
