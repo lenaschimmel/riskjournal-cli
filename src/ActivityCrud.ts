@@ -8,6 +8,8 @@ import Table from 'cli-table3';
 import dateAndTime from 'date-and-time';
 import { PlainActivity, PlainLocation, PlainPerson } from './PlainData';
 import lodash from "lodash";
+import { dateWithoutTime, timeSpanString } from './Helpers';
+
 
 export class ActivityCrud extends Crud {
   static tileQuestion: Question = {
@@ -145,10 +147,10 @@ export class ActivityCrud extends Crud {
 
     let prevDate = null;
     for (let activity of activityArray) {
-      let dateWithoutTime = Profile.dateWithoutTime(activity.begin);
-      if (prevDate != dateWithoutTime.getTime()) {
-        table.push([{ colSpan: 5, content: dateAndTime.format(dateWithoutTime, 'dddd, DD MMMM YYYY') }]);
-        prevDate = dateWithoutTime.getTime();
+      let date = dateWithoutTime(activity.begin);
+      if (prevDate != date.getTime()) {
+        table.push([{ colSpan: 5, content: dateAndTime.format(date, 'dddd, DD MMMM YYYY') }]);
+        prevDate = date.getTime();
       }
 
       table.push(this.getTableRowForActivity(activity));
@@ -182,7 +184,7 @@ export class ActivityCrud extends Crud {
       }
     }
 
-    let durationString = Profile.timeSpanString(activity.begin, activity.end);
+    let durationString = timeSpanString(activity.begin, activity.end);
     return [activity.title, locationString, participantsString, riskString, durationString];
   }
 
@@ -224,7 +226,7 @@ export class ActivityCrud extends Crud {
   }
 
   createActivityId(newActivity: PlainActivity): string {
-    return this.createId(newActivity.title + "-" + dateAndTime.format(Profile.dateWithoutTime(newActivity.begin), "DD-MM-YY"),  Array.from(this.profile.activities.keys()))
+    return this.createId(newActivity.title + "-" + dateAndTime.format(dateWithoutTime(newActivity.begin), "DD-MM-YY"),  Array.from(this.profile.activities.keys()))
   }
 
   async performDuplicate(id: string): Promise<void> {

@@ -8,12 +8,13 @@ import { CohabitationCrud } from './CohabitationCrud';
 const { prompt } = require('enquirer');
 import Table from 'cli-table3';
 import dateAndTime from 'date-and-time';
-import crypto  from "crypto";
+import crypto from "crypto";
 import { BASE_URL, HOST, PORT } from './constants';
 import DistrictData from './DistrictData';
 var targz = require('targz');
 const de = require('date-and-time/locale/de');
 dateAndTime.locale(de);
+import { addDays, dateWithoutTime, computeOverlapMinutes, computeOverlapWeeks, replacer, reviver } from './Helpers';
 
 import { defaultValues, calculateLocationPersonAverage, calculatePersonRisk, calculateActivityRisk } from './data/calculate';
 import { inspect } from 'util';
@@ -22,76 +23,53 @@ import https from 'https';
 import http from 'http';
 
 interface AnalysisDay {
-    date: Date,
-    incomingRisk: number,
-    outgoingRisk: number,
-    hasError: boolean
-}
-
-// Add support for Maps, from https://stackoverflow.com/a/56150320/39946
-function replacer(this: { [key: string]: any } , key: string, value: any) {
-  const originalObject = this[key];
-  if (originalObject instanceof Map) {
-    return {
-      dataType: 'Map',
-      value: Array.from(originalObject.entries()), // or with spread: value: [...originalObject]
-    };
-  } else {
-    return value;
-  }
-}
-
-// Add support for Maps, from https://stackoverflow.com/a/56150320/39946
-function reviver(key: string, value: any) {
-  if (typeof value === 'object' && value !== null) {
-    if (value.dataType === 'Map') {
-      return new Map(value.value);
-    }
-  }
-  return value;
+  date: Date,
+  incomingRisk: number,
+  outgoingRisk: number,
+  hasError: boolean
 }
 
 export default class Profile {
-  name         : string;
-  persons      : Map<string, PlainPerson>;
-  locations    : Map<string, PlainLocation>;
-  activities   : Map<string, PlainActivity>;
+  name: string;
+  persons: Map<string, PlainPerson>;
+  locations: Map<string, PlainLocation>;
+  activities: Map<string, PlainActivity>;
   cohabitations: Map<string, PlainCohabitation>;
 
   districtData: DistrictData;
 
-  activityCrud    : ActivityCrud     | undefined;
-  locationCrud    : LocationCrud     | undefined;
-  personCrud      : PersonCrud       | undefined;
-  cohabitationCrud: CohabitationCrud | undefined;
+  activityCrud: ActivityCrud | undefined;
+  locationCrud: LocationCrud | undefined;
+  personCrud: PersonCrud | undefined;
+  cohabitationCrud: CohabitationCrud | undefined;
 
-  privateKey : string | undefined;
-  publicKey  : string | undefined;
+  privateKey: string | undefined;
+  publicKey: string | undefined;
 
   constructor(name: string) {
     this.name = name;
 
-    this.locations     = this.loadFile("locations");
-    this.activities    = this.loadFile("activities");
-    this.persons       = this.loadFile("persons");
+    this.locations = this.loadFile("locations");
+    this.activities = this.loadFile("activities");
+    this.persons = this.loadFile("persons");
     this.cohabitations = this.loadFile("cohabitations");
     for (const [key, activity] of this.activities) {
       activity.begin = new Date(activity.begin)
-      activity.end   = new Date(activity.end)
-    }   
+      activity.end = new Date(activity.end)
+    }
     for (const [key, cohabitation] of this.cohabitations) {
       cohabitation.begin = new Date(cohabitation.begin)
-      cohabitation.end   = new Date(cohabitation.end)
+      cohabitation.end = new Date(cohabitation.end)
     }
     this.initKeys();
     this.districtData = new DistrictData();
   }
 
   save() {
-    this.saveObject("locations"       , this.locations);
-    this.saveObject("activities"      , this.activities);
-    this.saveObject("persons"         , this.persons);
-    this.saveObject("cohabitations"   , this.cohabitations);
+    this.saveObject("locations", this.locations);
+    this.saveObject("activities", this.activities);
+    this.saveObject("persons", this.persons);
+    this.saveObject("cohabitations", this.cohabitations);
   }
 
   filename(kind: string, ending: string = "json"): string {
@@ -140,20 +118,14 @@ export default class Profile {
     this.cohabitations.set(cohabitation.id, cohabitation);
   }
 
-  static dateWithoutTime(datetime: Date): Date {
-    // from https://stackoverflow.com/a/38050824/39946
-    // but with local time zone
-    return new Date(datetime.getFullYear(), datetime.getMonth(), datetime.getDate());
-  }
-
   getActivityChoices(): Array<{ name: string, message: string }> {
     return Array.from(Array.from(this.activities.values()).map(activity => ({ name: activity.id, message: activity.title })));
   }
 
   getDistrictChoices(): Array<{ name: string, message: string }> {
     return this.districtData.getChoices();
-  } 
-  
+  }
+
   getLocationChoices(): Array<{ name: string, message: string }> {
     return Array.from(Array.from(this.locations.values()).map(location => ({ name: location.id, message: location.title })));
   }
@@ -164,8 +136,8 @@ export default class Profile {
 
   getCohabitationTitle(cohabitation: PlainCohabitation): string {
     let begin = dateAndTime.format(cohabitation.begin, 'DD.MM.YY');
-    let end   = dateAndTime.format(cohabitation.end  , 'DD.MM.YY');
-    return "Mit " + this.persons.get(cohabitation.knownPersonId)?.name + " von " + begin +  " bis " + end;
+    let end = dateAndTime.format(cohabitation.end, 'DD.MM.YY');
+    return "Mit " + this.persons.get(cohabitation.knownPersonId)?.name + " von " + begin + " bis " + end;
   }
 
   getCohabitationChoices(): Array<{ name: string, message: string }> {
@@ -177,27 +149,6 @@ export default class Profile {
     return subDirs.filter(dir => dir.isDirectory()).map(dir => ({ message: dir.name, name: dir.name }));
   }
 
-  static timeSpanString(begin: Date, end: Date) {
-    let diffSeconds = (Math.floor(end.getTime() - begin.getTime())) / 1000;
-    if (diffSeconds < 90) {
-      return diffSeconds + " Sekunden";
-    }
-    let diffMinutes = Math.floor(diffSeconds / 60);
-    if (diffMinutes < 120) {
-      return diffMinutes + " Minuten";
-    }
-    let diffHours = Math.floor(diffMinutes / 60);
-    if (diffHours < 49) {
-      return diffHours + " Stunden";
-    }
-    let diffDays = Math.floor(diffHours / 24);
-    if (diffDays < 15) {
-      return diffDays + " Tage";
-    }
-    let diffWeeks = Math.floor(diffDays / 7);
-    return diffWeeks + " Wochen";
-  }
-
   async run() {
     let timer = setInterval(() => { this.downloadExternalRisk(); }, 3600 * 1000); // 1 hour
     this.downloadExternalRisk();
@@ -206,9 +157,9 @@ export default class Profile {
   }
 
   async showMenu() {
-    this.activityCrud     = new ActivityCrud(this);
-    this.locationCrud     = new LocationCrud(this);
-    this.personCrud       = new PersonCrud(this);
+    this.activityCrud = new ActivityCrud(this);
+    this.locationCrud = new LocationCrud(this);
+    this.personCrud = new PersonCrud(this);
     this.cohabitationCrud = new CohabitationCrud(this);
 
     while (true) {
@@ -253,24 +204,6 @@ export default class Profile {
     }
   }
 
-    
-  computeOverlapWeeks(begin: Date, end: Date, day: Date): number {
-    return this.computeOverlapMilliseconds(begin, end, day) / (60 * 60 * 1000 * 24 * 7);
-  }
-  
-  computeOverlapMinutes(begin: Date, end: Date, day: Date): number {
-    return this.computeOverlapMilliseconds(begin, end, day) / (60 * 1000);
-  }
-  
-  computeOverlapMilliseconds(begin: Date, end: Date, day: Date): number {
-    let eventBeginTime = begin.getTime();
-    let eventEndTime   = end.getTime();
-    let dayBeginTime   = Profile.dateWithoutTime(day).getTime();
-    let dayEndTime     = dayBeginTime + 1000 * 3600 * 24;
-    
-    return Math.max(0, Math.min(dayEndTime, eventEndTime) - Math.max(dayBeginTime, eventBeginTime));
-  }
-
   async showRiskAnalysis(analysis: Array<AnalysisDay>) {
     // let analysis = await this.computeRiskAnalysis();
     let table = new Table({
@@ -281,8 +214,8 @@ export default class Profile {
       let data = analysis[offset];
       table.push([
         dateAndTime.format(data.date, 'dd, DD MMMM:'),
-        { content: Math.floor(data.incomingRisk), hAlign:'right' },
-        { content: Math.floor(data.outgoingRisk), hAlign:'right' },
+        { content: Math.floor(data.incomingRisk), hAlign: 'right' },
+        { content: Math.floor(data.outgoingRisk), hAlign: 'right' },
         data.hasError ? "!" : ""
       ]);
     }
@@ -319,14 +252,14 @@ export default class Profile {
     unencrypedData.writeInt8(1, 3); // File format version
     unencrypedData.writeUInt32LE(analysis[daysCount - 1].date.getTime() / 1000, 4);
     unencrypedData.writeInt8(daysCount, 8);
-    
+
     for (let offset = daysCount - 1; offset >= 0; offset--) {
       let data = analysis[offset];
       unencrypedData.writeUInt16LE(data.outgoingRisk, 9 + 2 * (daysCount - 1 - offset));
     }
-    
+
     this.saveBuffer("export", unencrypedData, "unenc");
-    
+
     const encryptedData = crypto.publicEncrypt(
       {
         key: recipient.publicKey,
@@ -337,7 +270,7 @@ export default class Profile {
       unencrypedData
     )
 
-    this.saveBuffer("export_for_" + recipient.profileName.toLowerCase(), encryptedData,  "enc");
+    this.saveBuffer("export_for_" + recipient.profileName.toLowerCase(), encryptedData, "enc");
     // const signature = crypto.sign("sha256", encryptedData, {
     //   key: this.privateKey!,
     //   padding: crypto.constants.RSA_PKCS1_PSS_PADDING,
@@ -351,10 +284,10 @@ export default class Profile {
       encryptedData
     );
 
-    this.saveBuffer("export_for_" + recipient.profileName.toLowerCase(), signedData,  "sign");
+    this.saveBuffer("export_for_" + recipient.profileName.toLowerCase(), signedData, "sign");
 
     let messageId = this.computeMessageId(this.publicKey!, recipient.publicKey);
-    
+
     await this.postToServer(messageId, signedData);
   }
 
@@ -381,11 +314,11 @@ export default class Profile {
     const req = http.request(options, res => {
       console.log(`statusCode: ${res.statusCode}`)
     })
-    
+
     req.on('error', error => {
       console.error(error)
     })
-    
+
     req.write(data)
     req.end()
   }
@@ -423,8 +356,8 @@ export default class Profile {
         },
         signedData);
 
-      this.saveBuffer("from_signed", encryptedData,  "enc");
-      
+      this.saveBuffer("from_signed", encryptedData, "enc");
+
       let decryptedData = crypto.privateDecrypt(
         {
           key: this.privateKey!,
@@ -433,24 +366,24 @@ export default class Profile {
         },
         encryptedData);
 
-      if(decryptedData.readInt8(0) != 'M'.charCodeAt(0) ||
-         decryptedData.readInt8(1) != 'C'.charCodeAt(0) || 
-         decryptedData.readInt8(2) != 'A'.charCodeAt(0)) {
-          throw new Error("Magic bytes at the beginning are wrong.");
+      if (decryptedData.readInt8(0) != 'M'.charCodeAt(0) ||
+        decryptedData.readInt8(1) != 'C'.charCodeAt(0) ||
+        decryptedData.readInt8(2) != 'A'.charCodeAt(0)) {
+        throw new Error("Magic bytes at the beginning are wrong.");
       }
       let version = decryptedData.readInt8(3);
-      if(version != 1) {
+      if (version != 1) {
         throw new Error("Can only read version 1, but version is " + version);
       }
       let firstDate = new Date(decryptedData.readUInt32LE(4) * 1000);
       let daysCount = decryptedData.readInt8(8);
-      
+
       console.log("Habe Daten gelesen, erstes Datum ist: " + firstDate.toDateString());
 
       for (let offset = daysCount - 1; offset >= 0; offset--) {
         let risk = decryptedData.readUInt16LE(9 + 2 * (daysCount - 1 - offset));
         analysis[offset] = {
-          date: this.addDays(firstDate, daysCount - 1 - offset),
+          date: addDays(firstDate, daysCount - 1 - offset),
           incomingRisk: 0,
           outgoingRisk: risk,
           hasError: false
@@ -462,12 +395,6 @@ export default class Profile {
     }
     return null;
   }
-
-  addDays(inDate: Date, days: number) {
-    var date = new Date(inDate.valueOf());
-    date.setDate(date.getDate() + days);
-    return date;
-}
 
   async computeRiskAnalysis(): Promise<Array<AnalysisDay>> {
     // From Feretti et al., "Quantifying SARS-CoV-2 transmission suggests epidemic control with digital contact tracing", Fig. 2
@@ -485,11 +412,11 @@ export default class Profile {
     for (let offset = 42; offset >= 0; offset--) {
       let date = new Date();
       date.setDate(date.getDate() - offset);
-      date = Profile.dateWithoutTime(date);
+      date = dateWithoutTime(date);
       incomingRisk[offset] = 0;
 
       for (const [key, activity] of this.activities) {
-        let overlapMinutes = this.computeOverlapMinutes(activity.begin, activity.end, date);
+        let overlapMinutes = computeOverlapMinutes(activity.begin, activity.end, date);
 
         if (overlapMinutes > 0) {
           let activityRisk = this.computeActivityRisk(activity, overlapMinutes);
@@ -502,7 +429,7 @@ export default class Profile {
       }
 
       for (const [key, cohabitation] of this.cohabitations) {
-        let overlapWeeks = this.computeOverlapWeeks(cohabitation.begin, cohabitation.end, date);
+        let overlapWeeks = computeOverlapWeeks(cohabitation.begin, cohabitation.end, date);
 
         if (overlapWeeks > 0) {
           let cohabitationRisk = this.computeCohabitationRisk(cohabitation, overlapWeeks, date);
@@ -526,16 +453,16 @@ export default class Profile {
 
       let date = new Date();
       date.setDate(date.getDate() - offset);
-      date = Profile.dateWithoutTime(date);
+      date = dateWithoutTime(date);
 
       ret.push({
         date,
         incomingRisk: incomingRisk[offset],
         outgoingRisk: outgoingRisk[offset],
         hasError: hasError[offset]
-      });  
+      });
     }
-    
+
     return ret;
   }
 
@@ -554,7 +481,7 @@ export default class Profile {
     } else {
       personRisk = 0;
     }
-    
+
     for (const personId of activity.knownPersonIds) {
       let specificPersonRisk = this.getPersonRiskOnDay(personId, activity.begin);
       if (specificPersonRisk == null) {
@@ -590,7 +517,7 @@ export default class Profile {
       console.log("Konnte Risiko für " + cohabitation.knownPersonId + " nicht bestimmen.");
       return null;
     }
-    
+
     let calculatorData = {
       ...defaultValues,
       ...cohabitation,
@@ -604,12 +531,12 @@ export default class Profile {
       return null;
     }
 
-    return personRisk * activityRisk  * duration;
+    return personRisk * activityRisk * duration;
   }
 
   /// Calculates the risk for non-specific person given their idLandkreis and risk profile
-  getPersonRisk(riskProfile : string, idLandkreis: string, date: Date): number | null {
-    
+  getPersonRisk(riskProfile: string, idLandkreis: string, date: Date): number | null {
+
     let calculatorData = {
       ...defaultValues,
       topLocation: '',
@@ -620,7 +547,7 @@ export default class Profile {
     }
 
     // console.log("Berechne Risiko für " + inspect(calculatorData));
-    
+
     const averagePersonRisk = calculateLocationPersonAverage(calculatorData);
     if (averagePersonRisk === null) {
       console.log("No average risk");
@@ -643,7 +570,7 @@ export default class Profile {
       return null;
     }
 
-    if (person.profileName?.length >0) {
+    if (person.profileName?.length > 0) {
       let filename = "data/" + person.profileName + "/export.json";
       const rawData = fs.readFileSync(filename, { encoding: "utf8" });
       let data = JSON.parse(rawData);
@@ -654,14 +581,14 @@ export default class Profile {
         }
       }
     }
-  
-    return this.getPersonRisk(person.riskProfile, person.idLandkreis, date);  
+
+    return this.getPersonRisk(person.riskProfile, person.idLandkreis, date);
   }
 
   initKeys() {
     try {
       this.privateKey = fs.readFileSync(this.filename("private", "key"), { encoding: "utf8" });
-      this.publicKey  = fs.readFileSync(this.filename("public",  "key"), { encoding: "utf8" });
+      this.publicKey = fs.readFileSync(this.filename("public", "key"), { encoding: "utf8" });
     } catch (e) {
       console.log("Konnte Schlüsselpaar nicht lesen, erzeuge neues…");
       const { publicKey, privateKey } = crypto.generateKeyPairSync("rsa", {
@@ -677,9 +604,9 @@ export default class Profile {
         }
       })
       this.privateKey = privateKey;
-      this.publicKey  = publicKey;
+      this.publicKey = publicKey;
       fs.writeFileSync(this.filename("private", "key"), this.privateKey, { encoding: "utf8" });
-      fs.writeFileSync(this.filename("public" , "key"), this.publicKey , { encoding: "utf8" });
+      fs.writeFileSync(this.filename("public", "key"), this.publicKey, { encoding: "utf8" });
       console.log("Neues Schlüsselpaar wurde erzeugt und geschrieben.");
     }
   }
@@ -691,7 +618,7 @@ export default class Profile {
         const filePath = "data/" + this.name + "/imports/" + person.profileName + ".risk";
         let messageId = this.computeMessageId(person.publicKey, this.publicKey!);
         http.get(BASE_URL + messageId, res => {
-          if (res.statusCode == 200) { 
+          if (res.statusCode == 200) {
             let body = "";
             let stream = fs.createWriteStream(filePath);
             res.on("error", error => {
