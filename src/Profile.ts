@@ -128,7 +128,7 @@ export class Profile {
     return subDirs.filter(dir => dir.isDirectory()).map(dir => ({ message: dir.name, name: dir.name }));
   }
   
-  async computeRiskAnalysis(): Promise<Array<AnalysisDay>> {
+  async computeRiskAnalysis(personToExclude: PlainPerson | null = null): Promise<Array<AnalysisDay>> {
     // From Feretti et al., "Quantifying SARS-CoV-2 transmission suggests epidemic control with digital contact tracing", Fig. 2
     // First entry is 0 days after infection, without knowing if the case will be symtomatic or not
     const transmissionProb = [0, 0.045, 0.13, 0.245, 0.35, 0.375, 0.34, 0.25, 0.15, 0.075, 0.025, 0.01, 0.001, 0];
@@ -151,7 +151,7 @@ export class Profile {
         let overlapMinutes = computeOverlapMinutes(activity.begin, activity.end, date);
 
         if (overlapMinutes > 0) {
-          let activityRisk = this.computeActivityRisk(activity, overlapMinutes);
+          let activityRisk = this.computeActivityRisk(activity, overlapMinutes, personToExclude);
           if (activityRisk == null) {
             hasError[offset] = true;
           } else {
@@ -161,6 +161,10 @@ export class Profile {
       }
 
       for (const [key, cohabitation] of this.cohabitations) {
+        if (cohabitation.knownPersonId == personToExclude?.id) {
+          continue;
+        }
+
         let overlapWeeks = computeOverlapWeeks(cohabitation.begin, cohabitation.end, date);
 
         if (overlapWeeks > 0) {
@@ -198,7 +202,7 @@ export class Profile {
     return ret;
   }
 
-  computeActivityRisk(activity: PlainActivity, duration: number): number | null {
+  computeActivityRisk(activity: PlainActivity, duration: number, personToExclude: PlainPerson | null): number | null {
     // TODO refactor the calculation code from the original microCOVID project, or rewrite it,
     // so that we can put in the combined person risk of all persons
     let personRisk;
@@ -215,6 +219,9 @@ export class Profile {
     }
 
     for (const personId of activity.knownPersonIds) {
+      if (personId == personToExclude?.id) {
+        continue;
+      }
       let specificPersonRisk = this.getSpecificPersonRisk(personId, activity.begin);
       if (specificPersonRisk == null) {
         console.log("Konnte Risiko für " + personId + " nicht bestimmen.");

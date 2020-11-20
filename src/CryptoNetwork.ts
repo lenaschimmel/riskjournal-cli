@@ -101,7 +101,6 @@ export default class CryptoNetwork {
     req.end()
   }
 
-
   loadRiskAnalysisEnc(sender: PlainPerson): Array<AnalysisDay> | null {
     try {
       let analysis: Array<AnalysisDay> = [];
@@ -213,7 +212,8 @@ export default class CryptoNetwork {
     await this.exportRiskAnalysis(anaylsis);
     for (const person of this.profile.persons.values()) {
       if (person.publicKey?.length > 0) {
-        await this.exportRiskAnalysisEnc(anaylsis, person);
+        let exclusiveAnaylsis = await this.profile.computeRiskAnalysis(person);
+        await this.exportRiskAnalysisEnc(exclusiveAnaylsis, person);
       }
     }
   }
