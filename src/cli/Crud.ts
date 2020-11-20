@@ -1,11 +1,6 @@
-import { Profile } from "./Profile";
-import ProfileMenu from "./ProfileMenu";
 const { prompt } = require('enquirer');
-import { PlainActivity, PlainLocation, PlainPerson } from './PlainData';
-import { nodeModuleNameResolver } from "typescript";
-import { throws } from "assert";
-import { inspect } from "util";
-import { RiskProfile } from "./data/data";
+import { Profile } from "../Profile";
+import ProfileMenu from "./ProfileMenu";
 
 export interface Question {
   type: string,

@@ -1,7 +1,8 @@
-import { Crud, Question } from "./Crud";
-import ProfileMenu from "./ProfileMenu";
 const { prompt } = require('enquirer');
 import lodash from "lodash";
+
+import { Crud, Question } from "./Crud";
+import ProfileMenu from "./ProfileMenu";
 
 export class LocationCrud extends Crud {
   static titleQuestion = {

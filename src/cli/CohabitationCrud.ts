@@ -1,15 +1,15 @@
-import { Interaction } from "./data/data";
-import { Crud, Question } from "./Crud";
 const { prompt } = require('enquirer');
-const datePrompt = require('date-prompt')
-import { Profile } from "./Profile";
-import ProfileMenu from "./ProfileMenu";
+const datePrompt = require('date-prompt');
 import moment from 'moment';
+import lodash from "lodash";
 import Table from 'cli-table3';
 import dateAndTime from 'date-and-time';
-import { PlainCohabitation } from './PlainData';
-import lodash from "lodash";
-import { dateWithoutTime } from './Helpers';
+
+import { PlainCohabitation } from '../PlainData';
+import { dateWithoutTime } from '../Helpers';
+
+import { Crud, Question } from "./Crud";
+import ProfileMenu from "./ProfileMenu";
 
 export class CohabitationCrud extends Crud {
   static knownPersonIdQuestion: Question = {

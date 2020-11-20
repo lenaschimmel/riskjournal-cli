@@ -1,6 +1,6 @@
 import 'reflect-metadata';
 import { Profile } from './Profile';
-import ProfileMenu from './ProfileMenu';
+import ProfileMenu from './cli/ProfileMenu';
 const { prompt } = require('enquirer');
 import { CalculatorData, calculate } from './data/calculate';
 import fs from 'fs';

@@ -85,6 +85,7 @@ export default class DistrictData {
         dateString = maxDate;
       } else {
         console.log("No incidence for " + dateString, " but is not outside the known date range. Don't know what to do.");
+        console.log("We have data for: " + Array.from(district!.incidenceByDate.keys()).sort());
         throw new Error("No incidence for " + dateString);
       }
     }

@@ -1,8 +1,10 @@
-import { Crud, Question } from "./Crud";
-import ProfileMenu from "./ProfileMenu";
-import { RiskProfile } from "./data/data";
 const { prompt } = require('enquirer');
 import lodash from "lodash";
+
+import { RiskProfile } from "../data/data";
+
+import { Crud, Question } from "./Crud";
+import ProfileMenu from "./ProfileMenu";
 
 export class PersonCrud extends Crud {
   static nameQuestion = {

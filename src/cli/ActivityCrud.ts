@@ -1,15 +1,17 @@
-import { Setting, Interaction, Distance, TheirMask, YourMask, Voice, RiskProfile } from "./data/data";
-import { Crud, Question } from "./Crud";
 const { prompt } = require('enquirer');
 const datePrompt = require('date-prompt')
-import { Profile } from "./Profile";
-import ProfileMenu from "./ProfileMenu";
 import moment from 'moment';
 import Table from 'cli-table3';
 import dateAndTime from 'date-and-time';
-import { PlainActivity, PlainLocation, PlainPerson } from './PlainData';
 import lodash from "lodash";
-import { dateWithoutTime, timeSpanString } from './Helpers';
+
+import { Setting, Interaction, Distance, TheirMask, YourMask, Voice, RiskProfile } from "../data/data";
+import { Profile } from "../Profile";
+import { PlainActivity, PlainLocation, PlainPerson } from '../PlainData';
+import { dateWithoutTime, timeSpanString } from '../Helpers';
+
+import ProfileMenu from "./ProfileMenu";
+import { Crud, Question } from "./Crud";
 
 
 export class ActivityCrud extends Crud {

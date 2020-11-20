@@ -1,11 +1,13 @@
-import { Profile, AnalysisDay } from "./Profile";
+const { prompt } = require('enquirer');
+import Table from 'cli-table3';
+import dateAndTime from 'date-and-time';
+
+import { Profile, AnalysisDay } from "../Profile";
+
 import { ActivityCrud } from './ActivityCrud';
 import { PersonCrud } from './PersonCrud';
 import { LocationCrud } from './LocationCrud';
 import { CohabitationCrud } from './CohabitationCrud';
-const { prompt } = require('enquirer');
-import Table from 'cli-table3';
-import dateAndTime from 'date-and-time';
 
 export default class ProfileMenu {
   profile: Profile;
