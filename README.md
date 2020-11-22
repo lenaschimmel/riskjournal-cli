@@ -1,5 +1,7 @@
 <!-- PROJECT LOGO -->
 # RiskJournal CLI
+_This is part of a multi-repository project. See the [riskjournal repository](https://github.com/lenaschimmel/riskjournal) for a general overview._
+
 A command line client to log activities and their risk of contracting COVID-19.<br/>
 
 Heavily inspired and based on the the great [microCOVID](https://github.com/microcovid/microcovid).
@@ -8,7 +10,7 @@ Heavily inspired and based on the the great [microCOVID](https://github.com/micr
 <!-- TABLE OF CONTENTS -->
 ## Table of Contents
 
-- [RiskJournal CLI<](#riskjournal-cli)
+- [RiskJournal CLI](#riskjournal-cli)
   - [Table of Contents](#table-of-contents)
   - [About The Project](#about-the-project)
   - [Getting Started](#getting-started)
