@@ -1,3 +1,5 @@
+// This file is basically copy-pasted from the Microcovid project.
+
 export interface FormValue {
   label: string
   multiplier: number

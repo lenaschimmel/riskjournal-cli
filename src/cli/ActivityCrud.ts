@@ -192,7 +192,6 @@ export class ActivityCrud extends Crud {
   }
 
   async performEdit(id: string): Promise<void> {
-    console.log("Begin performEdit");
     ActivityCrud.locationIdQuestion.choices = [...this.profile.getLocationChoices(), { message: "<Neuer Ort>", name: "<new>" }];
     let activity = this.profile.activities.get(id);
     if(!activity) {
@@ -209,7 +208,6 @@ export class ActivityCrud extends Crud {
     const beginDate = await datePrompt('Anfangszeit?', { value: moment(activity.begin)} );
     const endDate = await datePrompt('Endzeit?', { value: moment(activity.end)} );
     const responseAfterDate = await prompt(ActivityCrud.questionsAfterDate, answers);
-    console.log("After prompt performEdit");
     if (responseBeforeDate.locationId == "<new>") {
       responseBeforeDate.locationId = await this.profileMenu.locationCrud?.performAdd();
     }

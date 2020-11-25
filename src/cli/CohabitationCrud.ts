@@ -74,7 +74,6 @@ export class CohabitationCrud extends Crud {
   }
 
   async performEdit(id: string): Promise<void> {
-    console.log("Begin performEdit");
     let cohabitation = this.profile.cohabitations.get(id);
     if(!cohabitation) {
       return;
@@ -87,7 +86,6 @@ export class CohabitationCrud extends Crud {
     const response = await prompt(CohabitationCrud.questions, answers);
     const beginDate = await datePrompt('Anfangsdatum?', { value: moment(cohabitation.begin)} );
     const endDate = await datePrompt('Enddatum?', { value: moment(cohabitation.end)} );
-    console.log("After prompt performEdit");
     Object.assign(cohabitation, response);
     cohabitation.begin = new Date(beginDate);
     cohabitation.end = new Date(endDate);

@@ -43,7 +43,6 @@ export class LocationCrud extends Crud {
     let answers = lodash.pick(location, ["title", "city", "sub"]);
     console.log("Before prompt performEdit");
     const response = await prompt(LocationCrud.questions, answers);
-    console.log("After prompt performEdit");
     Object.assign(location, response);
   }
 

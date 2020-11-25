@@ -58,15 +58,12 @@ export class PersonCrud extends Crud {
   }
 
   async performEdit(id: string): Promise<void> {
-    console.log("Begin performEdit");
     PersonCrud.districtQuestion.choices = this.profile.getDistrictChoices();
     let person = this.profile.persons.get(id);
     this.initAnswers(PersonCrud.questions, person as any);
-
     let answers = lodash.pick(person, ["name", "fullName", "loctionId", "riskProfile"]);
-    console.log("Before prompt performEdit");
+
     const response = await prompt(PersonCrud.questions, answers);
-    console.log("After prompt performEdit");
     Object.assign(person, response);
   }
 
