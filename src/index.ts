@@ -7,7 +7,7 @@ import fs from 'fs';
 import https from 'https';
 import http from 'http';
 var targz = require('targz');
-import { BASE_URL} from './constants';
+import { HOST, PORT } from './constants';
 require('trace-unhandled/register');
 
 import dateAndTime from 'date-and-time';
@@ -53,31 +53,46 @@ async function main() {
 }
 
 async function downloadIncidence() {
-  const filePath = "data/incidence/download.tar.gz";
-  const dirPath = "data/incidence/";
-  http.get(BASE_URL + "incidence", res => {
-    let body = "";
-    let stream = fs.createWriteStream(filePath);
-    res.on("error", error => {
-      console.log("Download error: " + error);
-    });
-    res.on("data", data => {
-      stream.write(data);
-    });
-    res.on("end", () => {
-      stream.close();
-      targz.decompress({
-        src: filePath,
-        dest: dirPath
-      }, function(err: Error){
-        if(err) {
-            console.log(err);
-        } else {
-            console.log("Download and extraction done!");
-        }
+  try {
+    const filePath = "data/incidence/download.tar.gz";
+    const dirPath = "data/incidence/";
+    console.log("Will try to download incidence.")
+    var options = {
+      host: HOST,
+      port: PORT,
+      path: '/incidence',
+      method: 'GET'
+    };
+    let req = http.get(options, res => {
+      let body = "";
+      let stream = fs.createWriteStream(filePath);
+      res.on("error", error => {
+        console.log("Download error: " + error);
+      });
+      res.on("data", data => {
+        stream.write(data);
+      });
+      res.on("end", () => {
+        stream.close();
+        targz.decompress({
+          src: filePath,
+          dest: dirPath
+        }, function(err: Error){
+          if(err) {
+              console.log(err);
+          } else {
+              console.log("Download and extraction done!");
+          }
+        });
       });
     });
-  });
+    req.on('error', e => {
+      console.log("Outer handler got error in downloadExternalRisk: " + e);
+    });
+    req.end();
+  } catch (e) {
+    console.error(e);
+  }
 }
 
 main();

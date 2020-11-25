@@ -183,28 +183,44 @@ export default class CryptoNetwork {
   downloadExternalRisk() {
     for (const person of this.profile.persons.values()) {
       if (person.publicKey && person.publicKey.length > 1) {
-        console.log("Now updating external risk for " + person.profileName);
+        try {
+          console.log("Now updating external risk for " + person.profileName);
           fs.mkdirSync("data/" + this.profile.name + "/imports/", { recursive: true});
-        const filePath = "data/" + this.profile.name + "/imports/" + person.profileName + ".risk";
-        let messageId = this.computeMessageId(person.publicKey, this.publicKey!);
-        http.get(BASE_URL + messageId, res => {
-          if (res.statusCode == 200) {
-            let body = "";
-            let stream = fs.createWriteStream(filePath);
-            res.on("error", error => {
-              console.log("Download error: " + error);
-            });
-            res.on("data", data => {
-              stream.write(data);
-            });
-            res.on("end", () => {
-              stream.close();
-              console.log("Finished updating external risk for " + person.profileName);
-            });
-          } else {
-            console.log("Download status code: " + res.statusCode + " with message: " + res.statusMessage);
-          }
-        });
+          const filePath = "data/" + this.profile.name + "/imports/" + person.profileName + ".risk";
+          let messageId = this.computeMessageId(person.publicKey, this.publicKey!);
+
+          var options = {
+            host: HOST,
+            port: PORT,
+            path: '/' + messageId,
+            method: 'GET'
+          };
+          
+          let req = http.request(options, res => {
+            if (res.statusCode == 200) {
+              let body = "";
+              let stream = fs.createWriteStream(filePath);
+              res.on("error", error => {
+                console.log("Inner handler got error in downloadExternalRisk: " + error);
+              });
+              res.on("data", data => {
+                stream.write(data);
+              });
+              res.on("end", () => {
+                stream.close();
+                console.log("Finished updating external risk for " + person.profileName);
+              });
+            } else {
+              console.log("Download status code: " + res.statusCode + " with message: " + res.statusMessage);
+            }
+          });
+          req.on('error', e => {
+            console.log("Outer handler got error in downloadExternalRisk: " + e);
+          });
+          req.end();
+        } catch(e) {
+          console.log("Caught error in downloadExternalRisk: " + e);
+        }
       }
     }
   }
