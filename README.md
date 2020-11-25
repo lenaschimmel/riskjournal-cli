@@ -50,8 +50,6 @@ _To be defined_
 npm install npm@latest -g
 ```
 
-To update the prevalence data, you will also need python 3.6 or newer. When you run `update_prevalence.py`, it will check if your virutal env is setup correctly and help you to fix it if needed.
-
 ### Installation
 
 1. Clone the repo
@@ -62,11 +60,7 @@ git clone git@github.com:lenaschimmel/riskjournal-cli.git
 ```sh
 npm install
 ```
-3. Update prevalence data
-```JS
-To be defined
-```
-4. Run
+3. Run
 ```JS
 npm run tsc && clear && node .
 ```
@@ -103,7 +97,7 @@ Distributed under the MIT License. See `LICENSE` for more information.
 <!-- CONTACT -->
 ## Contact
 
-Your Name - [@lenaschimmel](https://twitter.com/lenaschimmel) - mail@lenaschimmel.de
+Lena Schimmel - [@lenaschimmel](https://twitter.com/lenaschimmel) - mail@lenaschimmel.de
 
 Project Link: [https://github.com/lenaschimmel/riskjournal-cli](https://github.com/lenaschimmel/riskjournal-cli)
 
