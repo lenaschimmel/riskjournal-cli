@@ -104,6 +104,7 @@ export default class CryptoNetwork {
   loadRiskAnalysisEnc(sender: PlainPerson): Array<AnalysisDay> | null {
     try {
       let analysis: Array<AnalysisDay> = [];
+      fs.mkdirSync("data/" + this.profile.name + "/imports/", { recursive: true});
       let filePath = "data/" + this.profile.name + "/imports/" + sender.profileName + ".risk";
       let signedData = fs.readFileSync(filePath);
       let encryptedData = crypto.publicDecrypt(
@@ -183,6 +184,7 @@ export default class CryptoNetwork {
     for (const person of this.profile.persons.values()) {
       if (person.publicKey && person.publicKey.length > 1) {
         console.log("Now updating external risk for " + person.profileName);
+          fs.mkdirSync("data/" + this.profile.name + "/imports/", { recursive: true});
         const filePath = "data/" + this.profile.name + "/imports/" + person.profileName + ".risk";
         let messageId = this.computeMessageId(person.publicKey, this.publicKey!);
         http.get(BASE_URL + messageId, res => {

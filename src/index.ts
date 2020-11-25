@@ -20,6 +20,7 @@ process.on('warning', e => console.warn(e.stack));
 
 async function main() {
   try {
+    fs.mkdirSync("data/incidence", { recursive: true});
     console.log("Lade aktuelle Inzidenz-Werte herunter…");
     await downloadIncidence();
     console.log("…Inzidenz-Werte fertig.");

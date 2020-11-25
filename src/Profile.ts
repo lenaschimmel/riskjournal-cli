@@ -125,7 +125,7 @@ export class Profile {
 
   static getProfileChoices(): Array<{ message: string, name: string }> {
     let subDirs = fs.readdirSync("./data/", { encoding: "utf-8", withFileTypes: true });
-    return subDirs.filter(dir => dir.isDirectory()).map(dir => ({ message: dir.name, name: dir.name }));
+    return subDirs.filter(dir => dir.isDirectory() && dir.name != "incidence").map(dir => ({ message: dir.name, name: dir.name }));
   }
   
   async computeRiskAnalysis(personToExclude: PlainPerson | null = null): Promise<Array<AnalysisDay>> {
