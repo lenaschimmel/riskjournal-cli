@@ -113,6 +113,13 @@ export class Profile {
     return Array.from(Array.from(this.persons.values()).map(person => ({ name: person.id, message: person.name })));
   }
 
+  getLinkedPersonChoices(): Array<{ name: string, message: string }> {
+    return Array.from(
+      Array.from(this.persons.values())
+        .filter(person => person.publicKey?.length > 0 && person.profileName?.length > 0)
+        .map(person => ({ name: person.id, message: person.name })
+      ));
+  }
   getCohabitationTitle(cohabitation: PlainCohabitation): string {
     let begin = dateAndTime.format(cohabitation.begin, 'DD.MM.YY');
     let end = dateAndTime.format(cohabitation.end, 'DD.MM.YY');

@@ -76,7 +76,7 @@ export default class ProfileMenu {
   }
 
   async showExternalRiskAnalysis() {
-    let ids = this.profile.getPersonChoices();
+    let ids = this.profile.getLinkedPersonChoices();
     if (ids.length == 0) {
       console.log("Keine Personen vorhanden.");
       return;
