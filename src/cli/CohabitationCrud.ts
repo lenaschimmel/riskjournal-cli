@@ -3,7 +3,7 @@ const datePrompt = require('date-prompt');
 import moment from 'moment';
 import lodash from "lodash";
 import Table from 'cli-table3';
-import dateAndTime from 'date-and-time';
+import dateAndTime, { addDays } from 'date-and-time';
 
 import { PlainCohabitation } from '../PlainData';
 import { dateWithoutTime } from '../Helpers';
@@ -40,7 +40,7 @@ export class CohabitationCrud extends Crud {
   async printList(): Promise<void> {
     // instantiate
     let table = new Table({
-      head: ['Person', 'Von', 'Bis', 'Zusammen schlafen', 'Risiko']
+      head: ['Person', 'Von', 'Bis', 'Zusammen schlafen', 'Tägl. Risiko']
     });
 
     const cohabitationArray = Array.from(this.profile.cohabitations.values());
@@ -62,14 +62,28 @@ export class CohabitationCrud extends Crud {
     let beginString = dateAndTime.format(dateWithoutTime(cohabitation.begin), DATE_FORMAT_LOCAL);
     let endString   = dateAndTime.format(dateWithoutTime(cohabitation.end  ), DATE_FORMAT_LOCAL);
 
-    // let risk = this.profile.computeCohabitationRisk(cohabitation);
-    // if (risk != null) {
-    //   if (risk > 5) {
-    //     riskString = Math.floor(risk) + " µCoV"
-    //   } else {
-    //     riskString = (Math.floor(risk * 100) / 100) + " µCoV"
-    //   }
-    // }
+    let minRisk = 100000;
+    let maxRisk = 0;
+    let date = dateWithoutTime(cohabitation.begin);
+    while (date <= cohabitation.end) {
+      let risk = this.profile.computeCohabitationRisk(cohabitation, 1.0/7.0, date);
+      
+      if (risk != null) {
+        if (risk > maxRisk) {
+           maxRisk = risk;
+        } 
+        if (risk < minRisk) {
+          minRisk = risk;
+        }
+      }
+      date = addDays(date, 1);
+    }
+
+    if (minRisk < maxRisk * 0.9) {
+      riskString = Math.floor(minRisk) + " bis " + Math.floor(maxRisk) + " µCoV"; 
+    } else {
+      riskString = "ca. " +  Math.floor((minRisk + maxRisk) / 2) + " µCoV"; 
+    }
 
     return [personString, beginString, endString, sleepString, riskString];
   }
