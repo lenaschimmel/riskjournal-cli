@@ -11,3 +11,7 @@ export const AGE_GROUPS = [
     "unbekannt",
     "all"
 ];
+export const DATE_FORMAT_LOCAL = "DD.MM.YY";
+export const DATE_FORMAT_LONG = "dddd, DD MMMM YYYY";
+export const DATE_FORMAT_ISO = "YYYY-MM-DD";
+export const DATE_FORMAT_LONG_WITHOUT_YEAR = "dd, DD MMMM";

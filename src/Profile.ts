@@ -6,6 +6,7 @@ import { dateWithoutTime, computeOverlapMinutes, computeOverlapWeeks, replacer, 
 import { defaultValues, calculateLocationPersonAverage, calculatePersonRisk, calculateActivityRisk } from './data/calculate';
 import CryptoNetwork from './CryptoNetwork';
 import dateAndTime from 'date-and-time';
+import { DATE_FORMAT_LOCAL } from './constants';
 
 export interface AnalysisDay {
   date: Date,
@@ -98,7 +99,11 @@ export class Profile {
   }
 
   getActivityChoices(): Array<{ name: string, message: string }> {
-    return Array.from(Array.from(this.activities.values()).map(activity => ({ name: activity.id, message: activity.title })));
+    return Array.from(
+      Array.from(this.activities.values())
+      .sort((a, b) => a.begin.getTime() - b.begin.getTime())
+      .map(activity => ({ name: activity.id, message:  dateAndTime.format(activity.begin, DATE_FORMAT_LOCAL) + ": " + activity.title })
+      ));
   }
 
   getDistrictChoices(): Array<{ name: string, message: string }> {
@@ -121,8 +126,8 @@ export class Profile {
       ));
   }
   getCohabitationTitle(cohabitation: PlainCohabitation): string {
-    let begin = dateAndTime.format(cohabitation.begin, 'DD.MM.YY');
-    let end = dateAndTime.format(cohabitation.end, 'DD.MM.YY');
+    let begin = dateAndTime.format(cohabitation.begin, DATE_FORMAT_LOCAL);
+    let end = dateAndTime.format(cohabitation.end, DATE_FORMAT_LOCAL);
     return "Mit " + this.persons.get(cohabitation.knownPersonId)?.name + " von " + begin + " bis " + end;
   }
 

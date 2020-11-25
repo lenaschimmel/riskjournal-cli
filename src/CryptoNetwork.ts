@@ -1,6 +1,6 @@
 import crypto from "crypto";
 import http from 'http';
-import { BASE_URL, HOST, PORT } from './constants';
+import { BASE_URL, DATE_FORMAT_ISO, HOST, PORT } from './constants';
 import { Profile, AnalysisDay } from './Profile';
 import { PlainPerson } from './PlainData';
 import { addDays } from './Helpers';
@@ -240,7 +240,7 @@ export default class CryptoNetwork {
     let dataExport = [];
     for (let offset = 28; offset >= 0; offset--) {
       let data = analysis[offset];
-      dataExport.push({ date: dateAndTime.format(data.date, "YYYY-MM-DD"), contagiosity: data.outgoingRisk });
+      dataExport.push({ date: dateAndTime.format(data.date, DATE_FORMAT_ISO), contagiosity: data.outgoingRisk });
     }
     this.profile.saveObject("export", dataExport);
   }

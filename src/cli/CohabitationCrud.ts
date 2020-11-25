@@ -10,6 +10,7 @@ import { dateWithoutTime } from '../Helpers';
 
 import { Crud, Question } from "./Crud";
 import ProfileMenu from "./ProfileMenu";
+import { DATE_FORMAT_LOCAL } from '../constants';
 
 export class CohabitationCrud extends Crud {
   static knownPersonIdQuestion: Question = {
@@ -58,8 +59,8 @@ export class CohabitationCrud extends Crud {
     let personString = person.name;
     let riskString = "unbekannt";
     let sleepString = cohabitation.sleepingTogether ? "ja" : "nein";
-    let beginString = dateAndTime.format(dateWithoutTime(cohabitation.begin), "DD-MM-YY");
-    let endString   = dateAndTime.format(dateWithoutTime(cohabitation.end  ), "DD-MM-YY");
+    let beginString = dateAndTime.format(dateWithoutTime(cohabitation.begin), DATE_FORMAT_LOCAL);
+    let endString   = dateAndTime.format(dateWithoutTime(cohabitation.end  ), DATE_FORMAT_LOCAL);
 
     // let risk = this.profile.computeCohabitationRisk(cohabitation);
     // if (risk != null) {
@@ -96,7 +97,7 @@ export class CohabitationCrud extends Crud {
   }
 
   createCohabitationId(newCohabitation: PlainCohabitation): string {
-    return this.createId(this.profile.persons.get(newCohabitation.knownPersonId)?.name + "-" + dateAndTime.format(dateWithoutTime(newCohabitation.begin), "DD-MM-YY"),  Array.from(this.profile.cohabitations.keys()))
+    return this.createId(this.profile.persons.get(newCohabitation.knownPersonId)?.name + "-" + dateAndTime.format(dateWithoutTime(newCohabitation.begin), DATE_FORMAT_LOCAL),  Array.from(this.profile.cohabitations.keys()))
   }
 
   async performDuplicate(id: string): Promise<void> {

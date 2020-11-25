@@ -8,6 +8,7 @@ import { ActivityCrud } from './ActivityCrud';
 import { PersonCrud } from './PersonCrud';
 import { LocationCrud } from './LocationCrud';
 import { CohabitationCrud } from './CohabitationCrud';
+import { DATE_FORMAT_LONG_WITHOUT_YEAR } from '../constants';
 
 export default class ProfileMenu {
   profile: Profile;
@@ -105,7 +106,7 @@ export default class ProfileMenu {
     for (let offset = 28; offset >= 0; offset--) {
       let data = analysis[offset];
       table.push([
-        dateAndTime.format(data.date, 'dd, DD MMMM:'),
+        dateAndTime.format(data.date, DATE_FORMAT_LONG_WITHOUT_YEAR) + ":",
         { content: Math.floor(data.incomingRisk), hAlign: 'right' },
         { content: Math.floor(data.outgoingRisk), hAlign: 'right' },
         data.hasError ? "!" : ""

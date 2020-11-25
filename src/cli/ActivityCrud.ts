@@ -12,6 +12,7 @@ import { dateWithoutTime, timeSpanString } from '../Helpers';
 
 import ProfileMenu from "./ProfileMenu";
 import { Crud, Question } from "./Crud";
+import { DATE_FORMAT_LOCAL, DATE_FORMAT_LONG } from '../constants';
 
 
 export class ActivityCrud extends Crud {
@@ -152,7 +153,7 @@ export class ActivityCrud extends Crud {
     for (let activity of activityArray) {
       let date = dateWithoutTime(activity.begin);
       if (prevDate != date.getTime()) {
-        table.push([{ colSpan: 5, content: dateAndTime.format(date, 'dddd, DD MMMM YYYY') }]);
+        table.push([{ colSpan: 5, content: dateAndTime.format(date, DATE_FORMAT_LONG) }]);
         prevDate = date.getTime();
       }
 
@@ -227,7 +228,7 @@ export class ActivityCrud extends Crud {
   }
 
   createActivityId(newActivity: PlainActivity): string {
-    return this.createId(newActivity.title + "-" + dateAndTime.format(dateWithoutTime(newActivity.begin), "DD-MM-YY"),  Array.from(this.profile.activities.keys()))
+    return this.createId(newActivity.title + "-" + dateAndTime.format(dateWithoutTime(newActivity.begin), DATE_FORMAT_LOCAL),  Array.from(this.profile.activities.keys()))
   }
 
   async performDuplicate(id: string): Promise<void> {

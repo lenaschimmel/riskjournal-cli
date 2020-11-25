@@ -2,6 +2,7 @@ import dateAndTime from 'date-and-time';
 import fs from 'fs';
 import parse from 'csv-parse/lib/sync';
 import { inspect } from 'util';
+import { DATE_FORMAT_ISO } from './constants';
 
 interface Record {
   IdLandkreis: string;
@@ -73,7 +74,7 @@ export default class DistrictData {
 
   getIncidence(idLandkreis: string, date: Date, ageGroup: string): number {
     let district = this.districts.get(idLandkreis);
-    let dateString = dateAndTime.format(date, "YYYY-MM-DD");
+    let dateString = dateAndTime.format(date, DATE_FORMAT_ISO);
     if (!district!.incidenceByDate.has(dateString)) {
       let minDate = Array.from(district!.incidenceByDate.keys()).sort()[0];
       let maxDate = Array.from(district!.incidenceByDate.keys()).sort().reverse()[0];
